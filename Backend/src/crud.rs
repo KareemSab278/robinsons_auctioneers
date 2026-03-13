@@ -209,6 +209,7 @@ pub fn end_auction(conn: &Connection, auction_id: i64) -> Result<()> {
 pub fn admin_delete_auction(conn: &Connection, auction_id: i64) -> Result<()> {
     conn.execute(queries::DELETE_BIDS_FOR_AUCTION, params![auction_id])?;
     conn.execute(queries::DELETE_WON_AUCTIONS_FOR_AUCTION, params![auction_id])?;
+    conn.execute(queries::DELETE_AUCTION_IMAGES, params![auction_id])?;
     conn.execute(queries::DELETE_AUCTION, params![auction_id])?;
     Ok(())
 }

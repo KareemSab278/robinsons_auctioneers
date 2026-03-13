@@ -100,6 +100,13 @@ pub const CREATE_DB_SCHEMA: &str = "
             -- FOREIGN KEY (seller_id) REFERENCES accounts(account_id) -- removed to allow admin-created auctions
         );
 
+        CREATE TABLE IF NOT EXISTS auction_images (
+            image_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            auction_id INTEGER NOT NULL,
+            image_data BLOB NOT NULL,
+            FOREIGN KEY (auction_id) REFERENCES auctions(auction_id)
+        );
+
         CREATE TABLE IF NOT EXISTS bids (
             bid_id INTEGER PRIMARY KEY AUTOINCREMENT,
             auction_id INTEGER NOT NULL,
@@ -123,3 +130,8 @@ pub const CREATE_DB_SCHEMA: &str = "
 
 pub const GET_ADMIN_BY_USERNAME: &str =
     "SELECT admin_id, username, password_hash FROM admin WHERE username = ?1";
+
+pub const GET_AUCTION_IMAGES: &str = "SELECT image_id, image_data FROM auction_images WHERE auction_id = ?1 ORDER BY image_id ASC";
+pub const ADD_AUCTION_IMAGE: &str = "INSERT INTO auction_images (auction_id, image_data) VALUES (?1, ?2)";
+pub const COUNT_AUCTION_IMAGES: &str = "SELECT COUNT(*) FROM auction_images WHERE auction_id = ?1";
+pub const DELETE_AUCTION_IMAGES: &str = "DELETE FROM auction_images WHERE auction_id = ?1";

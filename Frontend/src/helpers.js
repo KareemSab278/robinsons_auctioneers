@@ -24,6 +24,8 @@ export {
   createAdmin,
   bootstrapAdmin,
   handleInvalidSession,
+  getAuctionImages,
+  uploadAuctionImage,
 };
 
 const getSessionExpiry = () => {
@@ -184,6 +186,19 @@ const bootstrapAdmin = async (data) => {
     body: JSON.stringify(data),
   });
   return res.json();
+};
+
+const getAuctionImages = async (id) => {
+  // returns array of base64 strings
+  return await request(`/api/auctions/${id}/images`);
+};
+
+// imageData should be an array of base64-encoded strings
+const uploadAuctionImage = async (id, imageData) => {
+  return await request(`/api/auctions/${id}/images`, {
+    method: "POST",
+    body: JSON.stringify({ image_data: Array.isArray(imageData) ? imageData : [imageData] }),
+  });
 };
 
 const handleInvalidSession = async () => {

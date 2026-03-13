@@ -1,6 +1,6 @@
 # Robinson's Auctioneers - Full Documentation
 
-This document explains the entire project from top to bottom: what it is, how it is structured, how every file works, how the front end and back end talk to each other, and how it is deployed.
+This document explains the entire project from top to bottom: what it is, how it is structured, how every file works, how the front end and back end talk to each other, and how it is deployed. Handles image upload but i didnt add that to the docs here lol.
 
 ---
 

@@ -4,6 +4,7 @@ mod structs;
 mod response;
 mod crud;
 mod authentication;
+mod images;
 
 use axum::{
     routing::{ get, post, put, delete },
@@ -15,6 +16,8 @@ use axum::{
 use tower_http::cors::CorsLayer;
 use axum::http::Method;
 use std::net::{ SocketAddr, UdpSocket };
+
+use base64::Engine as _;
 
 use response::ApiResponse;
 use structs::Auction;
@@ -47,6 +50,7 @@ pub async fn run() {
         .route("/api/auctions/:id/end", post(end_auction))
         .route("/api/auctions/:id/bids", get(get_auction_bids))
         .route("/api/auctions/:id/bids/max", get(get_max_bid))
+        .route("/api/auctions/:id/images", get(get_auction_images_handler).post(upload_auction_image))
 
         // bid routes
         .route("/api/bids", post(place_bid))
@@ -430,6 +434,69 @@ async fn admin_login(Json(payload): Json<structs::AuthReq>) -> impl IntoResponse
         Ok(None) => (StatusCode::UNAUTHORIZED, Json(ApiResponse::<structs::Account>::fail("Invalid admin credentials"))),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<structs::Account>::fail(e.to_string()))),
     }
+}
+
+async fn get_auction_images_handler(Path(id): Path<i64>) -> impl IntoResponse {
+    match database::open_connection().and_then(|conn| images::get_auction_images(&conn, id)) {
+        Ok(list) => {
+            let encoded: Vec<String> = list
+                .into_iter()
+                .map(|(_, bytes)| base64::engine::general_purpose::STANDARD.encode(&bytes))
+                .collect();
+            (StatusCode::OK, Json(ApiResponse::ok(encoded)))
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<Vec<String>>::fail(e.to_string())),
+        ),
+    }
+}
+
+async fn upload_auction_image(
+    Path(id): Path<i64>,
+    Json(payload): Json<structs::UploadImageReq>,
+) -> impl IntoResponse {
+    if !authentication::session_valid(&payload.session_expiry) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<i64>::fail_with_session("Session expired", false)),
+        );
+    }
+    // i think i need a loop here to go over the array of images and insert them one by one
+
+    let conn = match database::open_connection() {
+        Ok(c) => c,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<i64>::fail(e.to_string()))),
+    };
+    let count = match images::count_auction_images(&conn, id) {
+        Ok(n) => n,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<i64>::fail(e.to_string()))),
+    };
+    let incoming = payload.image_data.len() as i64;
+    if count + incoming > images::MAX_IMAGES_PER_AUCTION {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<i64>::fail(format!("Maximum {} images per auction", images::MAX_IMAGES_PER_AUCTION))),
+        );
+    }
+    let mut last_id = 0i64;
+    for b64 in &payload.image_data {
+        let bytes = match base64::engine::general_purpose::STANDARD.decode(b64) {
+            Ok(b) => b,
+            Err(_) => return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::<i64>::fail("Invalid base64 image data")),
+            ),
+        };
+        match images::add_auction_image(&conn, id, &bytes) {
+            Ok(image_id) => last_id = image_id,
+            Err(e) => return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<i64>::fail(e.to_string())),
+            ),
+        }
+    }
+    (StatusCode::OK, Json(ApiResponse::ok(last_id)))
 }
 
 #[tokio::main]

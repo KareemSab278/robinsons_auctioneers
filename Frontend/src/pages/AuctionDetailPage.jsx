@@ -10,16 +10,20 @@ import {
   Center,
   Paper,
   Table,
+  Image,
+  SimpleGrid,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { IconGavel, IconClock } from '@tabler/icons-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getAuctionById, getBidsForAuction } from '../helpers';
+import { getAuctionById, getBidsForAuction, getAuctionImages } from '../helpers';
 import {BidModal} from '../components/BidModal';
 import { useAuth } from '../context/AuthContext';
 import { timeLeft, formatPrice } from '../utils';
+import ImageViewer from "react-simple-image-viewer";
+
 export { AuctionDetailPage };
 const AuctionDetailPage = () => {
   const { id } = useParams();
@@ -27,17 +31,34 @@ const AuctionDetailPage = () => {
   const navigate = useNavigate();
   const [auction, setAuction] = useState(null);
   const [bids, setBids] = useState([]);
+  const [auctionImages, setAuctionImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [bidOpened, { open: openBid, close: closeBid }] = useDisclosure(false);
 
+    const [currentImage, setCurrentImage] = useState(0);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+ 
+  const openImageViewer = useCallback((index) => {
+    setCurrentImage(index);
+    setIsViewerOpen(true);
+  }, []);
+
+  const closeImageViewer = () => {
+    setCurrentImage(0);
+    setIsViewerOpen(false);
+  };
+
+
   const load = async () => {
     try {
-      const [auctionData, bidsData] = await Promise.all([
+      const [auctionData, bidsData, imagesData] = await Promise.all([
         getAuctionById(id),
         getBidsForAuction(id),
+        getAuctionImages(id),
       ]);
       setAuction(auctionData);
       setBids(bidsData);
+      setAuctionImages(imagesData ?? []);
     } catch (err) {
       notifications.show({ title: 'Error loading auction', message: err.message, color: 'red' });
     } finally {
@@ -93,6 +114,35 @@ const AuctionDetailPage = () => {
         <Title order={2}>{auction.title}</Title>
         {auction.description && <Text c="dimmed">{auction.description}</Text>}
       </Stack>
+
+      {auctionImages.length > 0 && (
+        <>
+          <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="xs" mb="xl">
+            {auctionImages.map((b64, i) => (
+              <Image
+                key={i}
+                src={`data:image/jpeg;base64,${b64}`}
+                radius="md"
+                fit="contain"
+                h={180}
+                style={{ background: 'var(--mantine-color-dark-7, #f1f3f5)', cursor: 'pointer' }}
+                alt={`${auction.title} image ${i + 1}`}
+                onClick={() => openImageViewer(i)}
+              />
+            ))}
+          </SimpleGrid>
+          {isViewerOpen && (
+            <ImageViewer
+              src={auctionImages.map((b64) => `data:image/jpeg;base64,${b64}`)}
+              currentIndex={currentImage}
+              onClose={closeImageViewer}
+              disableScroll={false}
+              backgroundStyle={{ backgroundColor: 'rgba(0,0,0,0.9)' }}
+              closeOnClickOutside={true}
+            />
+          )}
+        </>
+      )}
 
       <Paper withBorder p="xl" mb="xl" radius="md">
         <Group justify="space-between" align="flex-start">

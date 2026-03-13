@@ -117,3 +117,9 @@ pub struct CreateAdminReq {
     pub password: String,
     pub session_expiry: String,
 }
+
+#[derive(Deserialize)]
+pub struct UploadImageReq {
+    pub image_data: Vec<String>, // base64-encoded image bytes
+    pub session_expiry: String,
+}

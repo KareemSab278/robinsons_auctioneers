@@ -32,5 +32,15 @@ pub fn initialize_db() -> Result<String> {
     if !check_db_exists(db_path(DB_FILE).to_str().expect("Failed to start DB. Attempting to create new database...")) {
         create_new_db()?;
     }
+    // Migration: create auction_images table for existing databases (no-op if already exists)
+    let conn = open_connection()?;
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS auction_images (
+            image_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            auction_id INTEGER NOT NULL,
+            image_data BLOB NOT NULL,
+            FOREIGN KEY (auction_id) REFERENCES auctions(auction_id)
+        );"
+    )?;
     Ok("Database is ready.".to_string())
 }  
