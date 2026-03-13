@@ -16,7 +16,9 @@ import { useNavigate } from 'react-router-dom';
 import { IconUser, IconMail, IconLock, IconGavel } from '@tabler/icons-react';
 import { useAuth } from '../context/AuthContext';
 import { login, register, adminLogin } from '../helpers';
+
 export {LoginPage};
+
 const LoginPage = () => {
   const { signIn } = useAuth();
   const navigate = useNavigate();

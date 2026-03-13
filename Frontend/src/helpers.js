@@ -50,7 +50,7 @@ const request = async (path, options = {}) => {
   const res = await fetch(`${BASE_URL}${path}`, fetchOptions);
   const body = await res.json();
 
-  if (res.status === 401 || body.session_status === false) {
+  if (body.session_status === false) {
     localStorage.removeItem("signed_in_user");
     window.location.href = "/login";
     throw new Error("Session expired. Please log in again.");
