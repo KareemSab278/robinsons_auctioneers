@@ -1,27 +1,32 @@
-# fly.toml - configuration for Fly.io deployment
-# Run `flyctl launch` from this directory to generate/overwrite this file.
+# fly.toml app configuration file generated for robinsons-auctioneers-green-pine-3150 on 2026-03-13T15:22:16Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = "robinsons-auctioneers"
+app = 'robinsons-auctioneers-green-pine-3150'
+primary_region = 'lhr'
 
-# Use the Dockerfile
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
 
-# Ensure Fly sets PORT; your app reads PORT (default 3000)
 [env]
-  PORT = "3000"
+  PORT = '3000'
 
-# Persist the SQLite file across deploys
 [[mounts]]
-  source = "data"
-  destination = "/app"
+  source = 'data'
+  destination = '/app'
 
 [[services]]
+  protocol = 'tcp'
   internal_port = 3000
-  protocol = "tcp"
 
   [[services.ports]]
     port = 80
 
   [[services.ports]]
     port = 443
+
+[[vm]]
+  memory = '1gb'
+  cpus = 1
+  memory_mb = 1024
