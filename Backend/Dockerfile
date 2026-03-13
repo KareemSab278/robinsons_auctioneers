@@ -1,7 +1,7 @@
 # Backend Dockerfile - builds and packages the Rust Axum API
 
 # Build stage
-FROM rust:1.82-slim-bullseye AS builder
+FROM rust:latest AS builder
 WORKDIR /app
 
 # Copy dependency manifests and install dependencies
