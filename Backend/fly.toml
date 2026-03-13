@@ -1,0 +1,27 @@
+# fly.toml - configuration for Fly.io deployment
+# Run `flyctl launch` from this directory to generate/overwrite this file.
+
+app = "robinsons-auctioneers"
+
+# Use the Dockerfile
+[build]
+  dockerfile = "Dockerfile"
+
+# Ensure Fly sets PORT; your app reads PORT (default 3000)
+[env]
+  PORT = "3000"
+
+# Persist the SQLite file across deploys
+[[mounts]]
+  source = "data"
+  destination = "/app"
+
+[[services]]
+  internal_port = 3000
+  protocol = "tcp"
+
+  [[services.ports]]
+    port = 80
+
+  [[services.ports]]
+    port = 443
