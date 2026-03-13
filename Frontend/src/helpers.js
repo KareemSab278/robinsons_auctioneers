@@ -21,6 +21,8 @@ export {
   login,
   register,
   adminLogin,
+  createAdmin,
+  bootstrapAdmin,
   handleInvalidSession,
 };
 
@@ -166,6 +168,22 @@ const adminLogin = async (data) => {
     method: "POST",
     body: JSON.stringify(data),
   });
+};
+
+const createAdmin = async (data) => {
+  return await request("/api/admin/create", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+};
+
+const bootstrapAdmin = async (data) => {
+  const res = await fetch(`${BASE_URL}/api/admin/bootstrap`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return res.json();
 };
 
 const handleInvalidSession = async () => {

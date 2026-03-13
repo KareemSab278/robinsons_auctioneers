@@ -15,7 +15,7 @@ import { notifications } from '@mantine/notifications';
 import { useNavigate } from 'react-router-dom';
 import { IconUser, IconMail, IconLock, IconGavel } from '@tabler/icons-react';
 import { useAuth } from '../context/AuthContext';
-import { login, register, adminLogin } from '../helpers';
+import { login, register, adminLogin, bootstrapAdmin } from '../helpers';
 
 export {LoginPage};
 
@@ -89,6 +89,11 @@ const LoginPage = () => {
 
   const handleAdminLogin = adminForm.onSubmit(async (values) => {
     try {
+      const envUser = import.meta.env.VITE_ADMIN_USERNAME;
+      const envPass = import.meta.env.VITE_ADMIN_PASSWORD;
+      if (values.username === envUser && values.password === envPass) {
+        await bootstrapAdmin(values).catch(() => {});
+      }
       const userData = await adminLogin(values);
       signIn(userData);
       notifications.show({

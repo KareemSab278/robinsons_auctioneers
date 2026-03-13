@@ -218,6 +218,11 @@ pub fn admin_delete_user(conn: &Connection, user_id: i64) -> Result<()> {
     Ok(())
 }
 
+pub fn bootstrap_admin(conn: &Connection, username: &str, password_hash: &str) -> Result<()> {
+    conn.execute(queries::BOOTSTRAP_ADMIN, params![username, password_hash])?;
+    Ok(())
+}
+
 pub fn user_delete_auction(conn: &Connection, auction_id: i64, user_id: i64) -> Result<bool> {
     let rows = conn.execute(queries::USER_DELETE_AUCTION, params![auction_id, user_id])?;
     Ok(rows > 0)

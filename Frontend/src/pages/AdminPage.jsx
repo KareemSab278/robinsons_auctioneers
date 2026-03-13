@@ -22,6 +22,7 @@ import {
   IconGavel,
   IconPlus,
   IconEdit,
+  IconUserPlus,
 } from "@tabler/icons-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -35,6 +36,7 @@ import { useAuth } from "../context/AuthContext";
 import { formatPrice } from "../utils";
 import { CreateAuctionModal } from "../components/CreateAuctionModal";
 import { EditAuctionModal } from "../components/EditAuctionModal";
+import { NewAdminModal } from "../components/NewAdminModal";
 export { AdminPage };
 const AdminPage = () => {
   const { user } = useAuth();
@@ -46,6 +48,8 @@ const AdminPage = () => {
   const [createOpened, { open: openCreate, close: closeCreate }] =
     useDisclosure(false);
   const [editOpened, { open: openEdit, close: closeEdit }] =
+    useDisclosure(false);
+  const [newAdminOpened, { open: openNewAdmin, close: closeNewAdmin }] =
     useDisclosure(false);
 
   const load = async () => {
@@ -146,6 +150,13 @@ const AdminPage = () => {
           </Text>
           <Button leftSection={<IconPlus size={16} />} onClick={openCreate}>
             New Auction
+          </Button>
+          <Button
+            variant="light"
+            leftSection={<IconUserPlus size={16} />}
+            onClick={openNewAdmin}
+          >
+            New Admin
           </Button>
         </Group>
       </Group>
@@ -272,6 +283,10 @@ const AdminPage = () => {
         onClose={closeEdit}
         auction={selectedAuction}
         onUpdated={load}
+      />
+      <NewAdminModal
+        opened={newAdminOpened}
+        onClose={closeNewAdmin}
       />
     </Container>
   );

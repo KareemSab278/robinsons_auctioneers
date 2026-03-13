@@ -22,6 +22,7 @@ pub const CREATE_USER: &str = "INSERT INTO accounts (username, email, password_h
 pub const CHECK_ADMIN: &str = "SELECT * FROM admin WHERE username = ?1 AND password_hash = ?2";
 
 pub const CREATE_ADMIN: &str = "INSERT INTO admin (username, password_hash) VALUES (?1, ?2)";
+pub const BOOTSTRAP_ADMIN: &str = "INSERT OR IGNORE INTO admin (username, password_hash) VALUES (?1, ?2)";
 
 pub const AUTH_USER: &str = "SELECT * FROM accounts WHERE username = ?1 AND password_hash = ?2";
 

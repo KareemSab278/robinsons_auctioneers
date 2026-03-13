@@ -110,3 +110,10 @@ pub struct AdminLoginReq {
     pub username: String,
     pub password: String,
 }
+
+#[derive(Deserialize)]
+pub struct CreateAdminReq {
+    pub username: String,
+    pub password: String,
+    pub session_expiry: String,
+}

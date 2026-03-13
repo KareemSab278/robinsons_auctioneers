@@ -61,6 +61,8 @@ pub async fn run() {
         .route("/api/register", post(register))
         .route("/api/login", post(login))
         .route("/api/admin/login", post(admin_login))
+        .route("/api/admin/create", post(create_admin))
+        .route("/api/admin/bootstrap", post(bootstrap_admin))
 
         .layer(
             CorsLayer::new()
@@ -372,6 +374,37 @@ async fn register(Json(payload): Json<structs::CreateUserReq>) -> impl IntoRespo
         }
         Err(e) =>
             (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<structs::Account>::fail(e.to_string()))),
+    }
+}
+
+async fn bootstrap_admin(Json(payload): Json<structs::AuthReq>) -> impl IntoResponse {
+    let password_hash = match bcrypt::hash(&payload.password, bcrypt::DEFAULT_COST) {
+        Ok(h) => h,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<&str>::fail(e.to_string()))),
+    };
+    match database::open_connection().and_then(|conn| crud::bootstrap_admin(&conn, &payload.username, &password_hash)) {
+        Ok(()) => (StatusCode::OK, Json(ApiResponse::ok("ok"))),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<&str>::fail(e.to_string()))),
+    }
+}
+
+async fn create_admin(Json(payload): Json<structs::CreateAdminReq>) -> impl IntoResponse {
+    if !authentication::session_valid(&payload.session_expiry) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<structs::Admin>::fail_with_session("Session expired", false)),
+        );
+    }
+    let auth_req = structs::AuthReq {
+        username: payload.username,
+        password: payload.password,
+    };
+    match database::open_connection().and_then(|conn| authentication::create_admin(&conn, auth_req)) {
+        Ok(admin) => (StatusCode::OK, Json(ApiResponse::ok(admin))),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<structs::Admin>::fail(e.to_string())),
+        ),
     }
 }
 
