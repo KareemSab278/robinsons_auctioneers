@@ -17,11 +17,11 @@ import { IconGavel, IconClock } from '@tabler/icons-react';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getAuctionById, getBidsForAuction } from '../helpers';
-import BidModal from '../components/BidModal';
+import {BidModal} from '../components/BidModal';
 import { useAuth } from '../context/AuthContext';
 import { timeLeft, formatPrice } from '../utils';
-
-export default function AuctionDetailPage() {
+export { AuctionDetailPage };
+const AuctionDetailPage = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();

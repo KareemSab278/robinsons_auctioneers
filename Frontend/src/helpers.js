@@ -1,5 +1,5 @@
 const BASE_URL = import.meta.env.VITE_API_URL || "http://192.168.0.190:3000";
-
+import { AuthProvider } from "./context/AuthContext";
 export {
   getActiveAuctions,
   getEndedAuctions,
@@ -21,23 +21,50 @@ export {
   login,
   register,
   adminLogin,
+  handleInvalidSession,
+};
+
+const getSessionExpiry = () => {
+  return (
+    JSON.parse(localStorage.getItem("signed_in_user"))?.session_expiry || null
+  );
 };
 
 const request = async (path, options = {}) => {
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const expiry = getSessionExpiry();
+
+  const bodyObj = options.body ? JSON.parse(options.body) : {};
+  if (expiry) bodyObj.session_expiry = expiry;
+
+  const method = (options.method || "GET").toUpperCase();
+
+  const fetchOptions = {
     headers: { "Content-Type": "application/json", ...options.headers },
     ...options,
-  });
-  console.log(`response for ${path}: `, res);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(err.message || "Request failed");
+  };
+
+  if (method !== "GET" && method !== "HEAD") {
+    fetchOptions.body = JSON.stringify(bodyObj);
   }
+
+  const res = await fetch(`${BASE_URL}${path}`, fetchOptions);
   const body = await res.json();
+
+  if (res.status === 401 || body.session_status === false) {
+    localStorage.removeItem("signed_in_user");
+    window.location.href = "/login";
+    throw new Error("Session expired. Please log in again.");
+  }
+
+  if (!res.ok) {
+    throw new Error(body.message || body.error || "Request failed");
+  }
+
   if (!body.success) {
     throw new Error(body.error || "Request failed");
   }
-  return body.data;
+
+  return body.data ?? body.session_status;
 };
 
 const getActiveAuctions = async () => {
@@ -139,4 +166,28 @@ const adminLogin = async (data) => {
     method: "POST",
     body: JSON.stringify(data),
   });
+};
+
+const handleInvalidSession = async () => {
+  const signedInUser = JSON.parse(
+    localStorage.getItem("signed_in_user") || "null",
+  );
+  const expiry = signedInUser?.session_expiry;
+  if (!expiry) return false;
+
+  if (new Date(expiry) <= new Date()) {
+    localStorage.removeItem("signed_in_user");
+    return true;
+  }
+
+  try {
+    const sessionValid = await request("/api/session/validate", {
+      method: "POST",
+      body: JSON.stringify({ session_expiry: expiry }),
+    });
+    console.log("Session valid fn result:", sessionValid);
+    return sessionValid; // true if valid, false if expired
+  } catch {
+    return false;
+  }
 };

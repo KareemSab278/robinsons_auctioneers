@@ -14,10 +14,10 @@ import {
 import { IconSearch } from '@tabler/icons-react';
 import { useState, useEffect } from 'react';
 import { notifications } from '@mantine/notifications';
-import AuctionCard from '../components/AuctionCard';
+import {AuctionCard} from '../components/AuctionCard';
 import { getActiveAuctions, getEndedAuctions } from '../helpers';
-
-export default function HomePage() {
+export { HomePage };
+const HomePage = () => {
   const [activeAuctions, setActiveAuctions] = useState([]);
   const [endedAuctions, setEndedAuctions] = useState([]);
   const [loading, setLoading] = useState(true);

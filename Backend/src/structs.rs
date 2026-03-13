@@ -31,6 +31,7 @@ pub struct Account {
     // pub password_hash: String,
     pub created_at: String,
     pub is_admin: bool,
+    pub session_expiry: String,
 }
 
 #[derive(Serialize)]
@@ -48,6 +49,18 @@ pub struct WonAuction {
     pub winning_bid: f64,
     pub won_time: String,
 }
+
+#[derive(Serialize)]
+pub struct SessionStatus {
+    pub session_status: bool,
+    pub description: String,
+}
+
+#[derive(Deserialize)]
+pub struct SessionReq {
+    pub session_expiry: String,
+}
+
 #[derive(Deserialize)]
 pub struct CreateAuctionReq {
     pub title: String,
@@ -62,6 +75,7 @@ pub struct UpdateAuctionReq {
     pub title: String,
     pub description: Option<String>,
     pub end_time: String,
+    pub session_expiry: String,
 }
 
 #[derive(Deserialize)]
@@ -69,9 +83,10 @@ pub struct PlaceBidReq {
     pub auction_id: i64,
     pub bidder_id: i64,
     pub bid_amount: f64,
+    pub session_expiry: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct AuthReq {
     pub username: String,
     pub password: String,
@@ -88,8 +103,9 @@ pub struct CreateUserReq {
 pub struct UpdateUserReq {
     pub email: String,
     pub password: String,
+    pub session_expiry: String,
 }
-
+#[derive(Deserialize)]
 pub struct AdminLoginReq {
     pub username: String,
     pub password: String,

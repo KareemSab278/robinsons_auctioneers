@@ -4,8 +4,8 @@ import { notifications } from '@mantine/notifications';
 import { placeBid } from '../helpers';
 import { useAuth } from '../context/AuthContext';
 import { formatPrice } from '../utils';
-
-export default function BidModal({ opened, onClose, auction, onBidPlaced }) {
+export { BidModal };
+const BidModal = ({ opened, onClose, auction, onBidPlaced }) => {
   const { user } = useAuth();
   const minBid = (auction?.current_price ?? auction?.starting_price ?? 0) + 0.01;
 
@@ -53,11 +53,11 @@ export default function BidModal({ opened, onClose, auction, onBidPlaced }) {
         <form onSubmit={handleSubmit}>
           <Stack gap="sm">
             <NumberInput
-              label="Your Bid (USD)"
+              label="Your Bid (GBP)"
               placeholder={minBid.toFixed(2)}
               min={minBid}
               step={1}
-              prefix="$"
+              prefix="£"
               decimalScale={2}
               {...form.getInputProps('bid_amount')}
             />

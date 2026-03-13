@@ -2,8 +2,8 @@ import { Card, Text, Badge, Button, Group, Stack } from '@mantine/core';
 import { IconClock, IconGavel } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { timeLeft, formatPrice } from '../utils';
-
-export default function AuctionCard({ auction }) {
+export { AuctionCard };
+const AuctionCard = ({ auction }) => {
   const navigate = useNavigate();
   const currentPrice = auction.current_price ?? auction.starting_price;
   const active = auction.is_active;

@@ -100,6 +100,7 @@ pub fn get_user_by_id(conn: &Connection, user_id: i64) -> Result<Option<structs:
             // password_hash: row.get(3)?,
             created_at: row.get(4)?,
             is_admin: false,
+            session_expiry: String::new(),
         })
     })
     .optional()
@@ -116,6 +117,7 @@ pub fn get_user_by_username(conn: &Connection, username: &str) -> Result<Option<
                 email: row.get(2)?,
                 created_at: row.get(4)?,
                 is_admin: false,
+                session_expiry: String::new(),
             },
             row.get::<_, String>(3)?,
         ))
@@ -138,6 +140,7 @@ pub fn authenticate_user(conn: &Connection, username: &str, password_hash: &str)
             // password_hash: row.get(3)?,
             created_at: row.get(4)?,
             is_admin: false,
+            session_expiry: String::new(),
         })
     })
     .optional()

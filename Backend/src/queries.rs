@@ -95,8 +95,8 @@ pub const CREATE_DB_SCHEMA: &str = "
             seller_id INTEGER NOT NULL,
             start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
             end_time DATETIME NOT NULL,
-            is_active BOOLEAN DEFAULT 1,
-            FOREIGN KEY (seller_id) REFERENCES accounts(account_id)
+            is_active BOOLEAN DEFAULT 1
+            -- FOREIGN KEY (seller_id) REFERENCES accounts(account_id) -- removed to allow admin-created auctions
         );
 
         CREATE TABLE IF NOT EXISTS bids (

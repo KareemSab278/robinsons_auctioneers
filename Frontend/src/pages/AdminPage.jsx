@@ -12,27 +12,41 @@ import {
   Center,
   Loader,
   Stack,
-} from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
-import { notifications } from '@mantine/notifications';
-import { IconDots, IconTrash, IconBan, IconGavel, IconPlus, IconEdit } from '@tabler/icons-react';
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getActiveAuctions, getEndedAuctions, deleteAuction, endAuction } from '../helpers';
-import { useAuth } from '../context/AuthContext';
-import { formatPrice } from '../utils';
-import CreateAuctionModal from '../components/CreateAuctionModal';
-import EditAuctionModal from '../components/EditAuctionModal';
-
-export default function AdminPage() {
+} from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
+import {
+  IconDots,
+  IconTrash,
+  IconBan,
+  IconGavel,
+  IconPlus,
+  IconEdit,
+} from "@tabler/icons-react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  getActiveAuctions,
+  getEndedAuctions,
+  deleteAuction,
+  endAuction,
+} from "../helpers";
+import { useAuth } from "../context/AuthContext";
+import { formatPrice } from "../utils";
+import { CreateAuctionModal } from "../components/CreateAuctionModal";
+import { EditAuctionModal } from "../components/EditAuctionModal";
+export { AdminPage };
+const AdminPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [activeAuctions, setActiveAuctions] = useState([]);
   const [endedAuctions, setEndedAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedAuction, setSelectedAuction] = useState(null);
-  const [createOpened, { open: openCreate, close: closeCreate }] = useDisclosure(false);
-  const [editOpened, { open: openEdit, close: closeEdit }] = useDisclosure(false);
+  const [createOpened, { open: openCreate, close: closeCreate }] =
+    useDisclosure(false);
+  const [editOpened, { open: openEdit, close: closeEdit }] =
+    useDisclosure(false);
 
   const load = async () => {
     try {
@@ -43,7 +57,11 @@ export default function AdminPage() {
       setActiveAuctions(active);
       setEndedAuctions(ended);
     } catch (err) {
-      notifications.show({ title: 'Error', message: err.message, color: 'red' });
+      notifications.show({
+        title: "Error",
+        message: err.message,
+        color: "red",
+      });
     } finally {
       setLoading(false);
     }
@@ -58,7 +76,7 @@ export default function AdminPage() {
       <Center h="60vh">
         <Stack align="center" gap="sm">
           <Text c="dimmed">Access denied. Admins only.</Text>
-          <Button variant="subtle" onClick={() => navigate('/')}>
+          <Button variant="subtle" onClick={() => navigate("/")}>
             Go home
           </Button>
         </Stack>
@@ -77,20 +95,36 @@ export default function AdminPage() {
   const handleDeleteAuction = async (id) => {
     try {
       await deleteAuction(id);
-      notifications.show({ title: 'Auction deleted', message: '', color: 'teal' });
+      notifications.show({
+        title: "Auction deleted",
+        message: "",
+        color: "teal",
+      });
       load();
     } catch (err) {
-      notifications.show({ title: 'Error', message: err.message, color: 'red' });
+      notifications.show({
+        title: "Error",
+        message: err.message,
+        color: "red",
+      });
     }
   };
 
   const handleEndAuction = async (id) => {
     try {
       await endAuction(id);
-      notifications.show({ title: 'Auction ended', message: '', color: 'orange' });
+      notifications.show({
+        title: "Auction ended",
+        message: "",
+        color: "orange",
+      });
       load();
     } catch (err) {
-      notifications.show({ title: 'Error', message: err.message, color: 'red' });
+      notifications.show({
+        title: "Error",
+        message: err.message,
+        color: "red",
+      });
     }
   };
 
@@ -107,7 +141,8 @@ export default function AdminPage() {
         <Title order={2}>Admin Panel</Title>
         <Group gap="sm">
           <Text c="dimmed" size="sm">
-            {allAuctions.length} total auction{allAuctions.length !== 1 ? 's' : ''}
+            {allAuctions.length} total auction
+            {allAuctions.length !== 1 ? "s" : ""}
           </Text>
           <Button leftSection={<IconPlus size={16} />} onClick={openCreate}>
             New Auction
@@ -151,7 +186,7 @@ export default function AdminPage() {
                     <Table.Td>
                       <Text
                         fw={500}
-                        style={{ cursor: 'pointer' }}
+                        style={{ cursor: "pointer" }}
                         onClick={() => navigate(`/auction/${a.auction_id}`)}
                       >
                         {a.title}
@@ -159,11 +194,11 @@ export default function AdminPage() {
                     </Table.Td>
                     <Table.Td>
                       <Badge
-                        color={a.is_active ? 'teal' : 'gray'}
+                        color={a.is_active ? "teal" : "gray"}
                         variant="light"
                         size="sm"
                       >
-                        {a.is_active ? 'Active' : 'Ended'}
+                        {a.is_active ? "Active" : "Ended"}
                       </Badge>
                     </Table.Td>
                     <Table.Td>
@@ -240,4 +275,4 @@ export default function AdminPage() {
       />
     </Container>
   );
-}
+};

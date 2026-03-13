@@ -5,7 +5,7 @@ import { notifications } from '@mantine/notifications';
 import { createAuction } from '../helpers';
 import { useAuth } from '../context/AuthContext';
 
-export default function CreateAuctionModal({ opened, onClose, onCreated }) {
+const CreateAuctionModal = ({ opened, onClose, onCreated }) => {
   const { user } = useAuth();
 
   const form = useForm({
@@ -28,11 +28,12 @@ export default function CreateAuctionModal({ opened, onClose, onCreated }) {
   });
 
   const handleSubmit = form.onSubmit(async (values) => {
+    const end_time = new Date(values.end_time);
     try {
       await createAuction({
         ...values,
-        seller_id: user.account_id,
-        end_time: values.end_time.toISOString(),
+        seller_id: user.account_id || user.admin_id,
+        end_time: end_time.toISOString(),
       });
       notifications.show({
         title: 'Auction created!',
@@ -67,10 +68,10 @@ export default function CreateAuctionModal({ opened, onClose, onCreated }) {
             {...form.getInputProps('description')}
           />
           <NumberInput
-            label="Starting Price (USD)"
+            label="Starting Price (GBP)"
             min={0.01}
             step={1}
-            prefix="$"
+            prefix="£"
             decimalScale={2}
             {...form.getInputProps('starting_price')}
           />
@@ -91,3 +92,4 @@ export default function CreateAuctionModal({ opened, onClose, onCreated }) {
     </Modal>
   );
 }
+export {CreateAuctionModal}

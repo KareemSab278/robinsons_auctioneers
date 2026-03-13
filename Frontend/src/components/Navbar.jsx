@@ -9,8 +9,8 @@ import {
 } from '@tabler/icons-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-
-export default function Navbar() {
+export { Navbar };
+const Navbar = () => {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();

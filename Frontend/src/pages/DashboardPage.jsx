@@ -19,12 +19,12 @@ import { IconPlus, IconDots, IconEdit, IconTrash, IconGavel } from '@tabler/icon
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getUserAuctions, getUserWonAuctions, deleteAuction } from '../helpers';
-import CreateAuctionModal from '../components/CreateAuctionModal';
-import EditAuctionModal from '../components/EditAuctionModal';
+import {CreateAuctionModal} from '../components/CreateAuctionModal';
+import {EditAuctionModal} from '../components/EditAuctionModal';
 import { useAuth } from '../context/AuthContext';
 import { formatPrice } from '../utils';
-
-export default function DashboardPage() {
+export { DashboardPage };
+const DashboardPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [myAuctions, setMyAuctions] = useState([]);

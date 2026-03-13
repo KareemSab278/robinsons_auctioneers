@@ -1,13 +1,46 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AppShell } from '@mantine/core';
-import Navbar from './components/Navbar';
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
-import AuctionDetailPage from './pages/AuctionDetailPage';
-import DashboardPage from './pages/DashboardPage';
-import AdminPage from './pages/AdminPage';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AppShell } from "@mantine/core";
+import { Navbar } from "./components/Navbar";
+import { HomePage } from "./pages/HomePage";
+import { LoginPage } from "./pages/LoginPage";
+import { AuctionDetailPage } from "./pages/AuctionDetailPage";
+import { DashboardPage } from "./pages/DashboardPage";
+import { AdminPage } from "./pages/AdminPage";
+import { useEffect } from "react";
+import { handleInvalidSession } from "./helpers";
+import { notifications } from "@mantine/notifications";
 
-export function App() {
+export { App };
+
+const SESSION_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+const checkSession = async () => {
+  const interval = setInterval(() => {
+     if (window.location.pathname === "/login") {
+      return;
+    }
+    void (async () => {
+      const sessionValid = await handleInvalidSession();
+      console.log("Session check result:", sessionValid);
+      if (!sessionValid) {
+        console.log("Session invalid, logging out.");
+        window.location.href = "/login";
+        notifications.show({
+          title: "Session Expired",
+          message: "Your session has expired. Please log in again.",
+          color: "red",
+        });
+      }
+    })();
+  }, SESSION_CHECK_INTERVAL_MS);
+  return () => clearInterval(interval);
+};
+
+const App = () => {
+  useEffect(() => {
+    checkSession();
+  }, []);
+
   return (
     <BrowserRouter>
       <AppShell header={{ height: 64 }} padding="md">
@@ -27,6 +60,6 @@ export function App() {
       </AppShell>
     </BrowserRouter>
   );
-}
+};
 
 export default App;

@@ -4,8 +4,8 @@ import { useForm } from '@mantine/form';
 import { useEffect } from 'react';
 import { notifications } from '@mantine/notifications';
 import { updateAuction } from '../helpers';
-
-export default function EditAuctionModal({ opened, onClose, auction, onUpdated }) {
+export { EditAuctionModal };
+const EditAuctionModal = ({ opened, onClose, auction, onUpdated }) => {
   const form = useForm({
     initialValues: { title: '', description: '', end_time: null },
     validate: {

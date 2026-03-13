@@ -1,33 +1,44 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState } from "react";
 
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
+export { AuthProvider };
+
+const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
-      const stored = localStorage.getItem('rb_user');
+      const stored = localStorage.getItem("signed_in_user");
       return stored ? JSON.parse(stored) : null;
     } catch {
       return null;
     }
   });
 
-  function signIn(userData) {
+  const signIn = (userData) => {
     setUser(userData);
-    localStorage.setItem('rb_user', JSON.stringify(userData));
+    localStorage.setItem("signed_in_user", JSON.stringify(userData));
   }
 
-  function signOut() {
+  const signOut = () => {
+    if (!localStorage.getItem("signed_in_user")) {
+      setUser(null);
+      return;
+    }
     setUser(null);
-    localStorage.removeItem('rb_user');
+    localStorage.removeItem("signed_in_user");
+  }
+
+  const sessionValidStatus = (timeStamp) => {
+    if (!timeStamp) return false;
+    return new Date(timeStamp) > new Date();
   }
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, signIn, signOut, sessionValidStatus }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
 export function useAuth() {
   return useContext(AuthContext);

@@ -3,6 +3,7 @@ mod queries;
 mod structs;
 mod response;
 mod crud;
+mod authentication;
 
 use axum::{
     routing::{ get, post, put, delete },
@@ -33,6 +34,7 @@ pub async fn run() {
 
     let app = Router::new()
         .route("/health", get(health))
+        .route("/api/session/validate", post(session_check))
 
         // auction routes
         .route("/api/auctions/active", get(get_active_auctions))
@@ -83,6 +85,12 @@ pub async fn run() {
 
 async fn health() -> impl IntoResponse {
     Json(ApiResponse::ok("ok"))
+}
+
+async fn session_check(Json(payload): Json<structs::SessionReq>) -> impl IntoResponse {
+    let valid = authentication::session_valid(&payload.session_expiry);
+    Json(ApiResponse::<bool>::session_passed(valid))
+    // returns true if session is valid, false if expired or invalid format
 }
 
 async fn get_active_auctions() -> impl IntoResponse {
@@ -154,6 +162,10 @@ async fn update_auction(
     Path(id): Path<i64>,
     Json(payload): Json<structs::UpdateAuctionReq>
 ) -> impl IntoResponse {
+    if !authentication::session_valid(&payload.session_expiry) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<bool>::fail_with_session("Session expired", false)),
+);
+    }
     let result = database::open_connection().and_then(|conn| {
         // fetch current active flag so we don't accidentally reactivate ended auctions
         let is_active = crud
@@ -176,7 +188,11 @@ async fn update_auction(
     }
 }
 
-async fn delete_auction(Path(id): Path<i64>) -> impl IntoResponse {
+async fn delete_auction(Path(id): Path<i64>, Json(payload): Json<structs::SessionReq>) -> impl IntoResponse {
+    if !authentication::session_valid(&payload.session_expiry) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<&str>::fail_with_session("Session expired", false)),
+);
+    }
     match database::open_connection().and_then(|conn| crud::admin_delete_auction(&conn, id)) {
         Ok(()) => (StatusCode::OK, Json(ApiResponse::ok("deleted"))),
         Err(e) =>
@@ -184,7 +200,11 @@ async fn delete_auction(Path(id): Path<i64>) -> impl IntoResponse {
     }
 }
 
-async fn end_auction(Path(id): Path<i64>) -> impl IntoResponse {
+async fn end_auction(Path(id): Path<i64>, Json(payload): Json<structs::SessionReq>) -> impl IntoResponse {
+    if !authentication::session_valid(&payload.session_expiry) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<&str>::fail_with_session("Session expired", false)),
+);
+    }
     match database::open_connection().and_then(|conn| crud::end_auction(&conn, id)) {
         Ok(()) => (StatusCode::OK, Json(ApiResponse::ok("ended"))),
         Err(e) =>
@@ -215,6 +235,10 @@ async fn get_max_bid(Path(id): Path<i64>) -> impl IntoResponse {
 }
 
 async fn place_bid(Json(payload): Json<structs::PlaceBidReq>) -> impl IntoResponse {
+    if !authentication::session_valid(&payload.session_expiry) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<i64>::fail_with_session("Session expired", false)),
+);
+    }
     match
         database
             ::open_connection()
@@ -228,7 +252,11 @@ async fn place_bid(Json(payload): Json<structs::PlaceBidReq>) -> impl IntoRespon
     }
 }
 
-async fn delete_bid(Path(id): Path<i64>) -> impl IntoResponse {
+async fn delete_bid(Path(id): Path<i64>, Json(payload): Json<structs::SessionReq>) -> impl IntoResponse {
+    if !authentication::session_valid(&payload.session_expiry) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<bool>::fail_with_session("Session expired", false)),
+);
+    }
     // user deletion rules not enforced here
     match database::open_connection().and_then(|conn| crud::user_delete_bid(&conn, id, 0)) {
         Ok(deleted) => (StatusCode::OK, Json(ApiResponse::ok(deleted))),
@@ -254,10 +282,18 @@ async fn update_user(
     Path(id): Path<i64>,
     Json(payload): Json<structs::UpdateUserReq>
 ) -> impl IntoResponse {
+    if !authentication::session_valid(&payload.session_expiry) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<bool>::fail_with_session("Session expired", false)),
+);
+    }
+    let password_hash = match bcrypt::hash(&payload.password, bcrypt::DEFAULT_COST) {
+        Ok(h) => h,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<bool>::fail(e.to_string()))),
+    };
     match
         database
             ::open_connection()
-            .and_then(|conn| { crud::update_user(&conn, id, &payload.email, &payload.password) })
+            .and_then(|conn| { crud::update_user(&conn, id, &payload.email, &password_hash) })
     {
         Ok(changed) => (StatusCode::OK, Json(ApiResponse::ok(changed))),
         Err(e) =>
@@ -265,7 +301,11 @@ async fn update_user(
     }
 }
 
-async fn delete_user(Path(id): Path<i64>) -> impl IntoResponse {
+async fn delete_user(Path(id): Path<i64>, Json(payload): Json<structs::SessionReq>) -> impl IntoResponse {
+    if !authentication::session_valid(&payload.session_expiry) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<&str>::fail_with_session("Session expired", false)),
+);
+    }
     match database::open_connection().and_then(|conn| crud::admin_delete_user(&conn, id)) {
         Ok(()) => (StatusCode::OK, Json(ApiResponse::ok("deleted"))),
         Err(e) =>
@@ -288,7 +328,11 @@ async fn login(Json(payload): Json<structs::AuthReq>) -> impl IntoResponse {
     match database::open_connection().and_then(|conn| crud::get_user_by_username(&conn, &payload.username)) {
         Ok(Some((user, stored_hash))) => {
             match bcrypt::verify(&payload.password, &stored_hash) {
-                Ok(true) => (StatusCode::OK, Json(ApiResponse::ok(user))),
+                Ok(true) => {
+                    let mut authed_user = user;
+                    authed_user.session_expiry = authentication::new_session_expiry();
+                    (StatusCode::OK, Json(ApiResponse::ok(authed_user)))
+                }
                 _ => (StatusCode::UNAUTHORIZED, Json(ApiResponse::<structs::Account>::fail("Invalid credentials"))),
             }
         }
@@ -316,7 +360,11 @@ async fn register(Json(payload): Json<structs::CreateUserReq>) -> impl IntoRespo
                 )
             })
     {
-        Ok(user) => (StatusCode::OK, Json(ApiResponse::ok(user))),
+        Ok(user) => {
+            let mut registered_user = user;
+            registered_user.session_expiry = authentication::new_session_expiry();
+            (StatusCode::OK, Json(ApiResponse::ok(registered_user)))
+        }
         Err(e) =>
             (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<structs::Account>::fail(e.to_string()))),
     }
@@ -334,6 +382,7 @@ async fn admin_login(Json(payload): Json<structs::AuthReq>) -> impl IntoResponse
                         email: String::new(),
                         created_at: String::new(),
                         is_admin: true,
+                        session_expiry: authentication::new_session_expiry(),
                     };
                     (StatusCode::OK, Json(ApiResponse::ok(admin_account)))
                 }
