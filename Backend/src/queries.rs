@@ -119,3 +119,6 @@ pub const CREATE_DB_SCHEMA: &str = "
             FOREIGN KEY (winner_id) REFERENCES accounts(account_id)
         );
         ";
+
+pub const GET_ADMIN_BY_USERNAME: &str =
+    "SELECT admin_id, username, password_hash FROM admin WHERE username = ?1";

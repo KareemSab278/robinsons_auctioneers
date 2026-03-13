@@ -13,13 +13,16 @@ import {
   Loader,
   Stack,
 } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { IconDots, IconTrash, IconBan, IconGavel } from '@tabler/icons-react';
+import { IconDots, IconTrash, IconBan, IconGavel, IconPlus, IconEdit } from '@tabler/icons-react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getActiveAuctions, getEndedAuctions, deleteAuction, endAuction } from '../helpers';
 import { useAuth } from '../context/AuthContext';
 import { formatPrice } from '../utils';
+import CreateAuctionModal from '../components/CreateAuctionModal';
+import EditAuctionModal from '../components/EditAuctionModal';
 
 export default function AdminPage() {
   const { user } = useAuth();
@@ -27,6 +30,9 @@ export default function AdminPage() {
   const [activeAuctions, setActiveAuctions] = useState([]);
   const [endedAuctions, setEndedAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedAuction, setSelectedAuction] = useState(null);
+  const [createOpened, { open: openCreate, close: closeCreate }] = useDisclosure(false);
+  const [editOpened, { open: openEdit, close: closeEdit }] = useDisclosure(false);
 
   const load = async () => {
     try {
@@ -45,7 +51,6 @@ export default function AdminPage() {
 
   useEffect(() => {
     load();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!user?.is_admin) {
@@ -89,15 +94,25 @@ export default function AdminPage() {
     }
   };
 
+  const handleEdit = (auction) => {
+    setSelectedAuction(auction);
+    openEdit();
+  };
+
   const allAuctions = [...activeAuctions, ...endedAuctions];
 
   return (
     <Container size="xl" py="xl">
       <Group justify="space-between" mb="xl">
         <Title order={2}>Admin Panel</Title>
-        <Text c="dimmed" size="sm">
-          {allAuctions.length} total auction{allAuctions.length !== 1 ? 's' : ''}
-        </Text>
+        <Group gap="sm">
+          <Text c="dimmed" size="sm">
+            {allAuctions.length} total auction{allAuctions.length !== 1 ? 's' : ''}
+          </Text>
+          <Button leftSection={<IconPlus size={16} />} onClick={openCreate}>
+            New Auction
+          </Button>
+        </Group>
       </Group>
 
       <Tabs defaultValue="auctions">
@@ -180,6 +195,14 @@ export default function AdminPage() {
                           </Menu.Item>
                           {a.is_active && (
                             <Menu.Item
+                              leftSection={<IconEdit size={15} />}
+                              onClick={() => handleEdit(a)}
+                            >
+                              Edit
+                            </Menu.Item>
+                          )}
+                          {a.is_active && (
+                            <Menu.Item
                               leftSection={<IconBan size={15} />}
                               onClick={() => handleEndAuction(a.auction_id)}
                             >
@@ -203,6 +226,18 @@ export default function AdminPage() {
           )}
         </Tabs.Panel>
       </Tabs>
+
+      <CreateAuctionModal
+        opened={createOpened}
+        onClose={closeCreate}
+        onCreated={load}
+      />
+      <EditAuctionModal
+        opened={editOpened}
+        onClose={closeEdit}
+        auction={selectedAuction}
+        onUpdated={load}
+      />
     </Container>
   );
 }

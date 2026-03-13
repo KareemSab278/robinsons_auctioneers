@@ -58,6 +58,7 @@ pub async fn run() {
 
         .route("/api/register", post(register))
         .route("/api/login", post(login))
+        .route("/api/admin/login", post(admin_login))
 
         .layer(
             CorsLayer::new()
@@ -318,6 +319,29 @@ async fn register(Json(payload): Json<structs::CreateUserReq>) -> impl IntoRespo
         Ok(user) => (StatusCode::OK, Json(ApiResponse::ok(user))),
         Err(e) =>
             (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<structs::Account>::fail(e.to_string()))),
+    }
+}
+
+async fn admin_login(Json(payload): Json<structs::AuthReq>) -> impl IntoResponse {
+    match database::open_connection().and_then(|conn| crud::get_admin_by_username(&conn, &payload.username)) {
+        Ok(Some((admin_id, stored_hash))) => {
+            // if there is an admin then see if the password is correct with the one in the db
+            match bcrypt::verify(&payload.password, &stored_hash) {
+                Ok(true) => {
+                    let admin_account = structs::Account {
+                        account_id: admin_id,
+                        username: payload.username,
+                        email: String::new(),
+                        created_at: String::new(),
+                        is_admin: true,
+                    };
+                    (StatusCode::OK, Json(ApiResponse::ok(admin_account)))
+                }
+                _ => (StatusCode::UNAUTHORIZED, Json(ApiResponse::<structs::Account>::fail("Invalid admin credentials"))),
+            }
+        }
+        Ok(None) => (StatusCode::UNAUTHORIZED, Json(ApiResponse::<structs::Account>::fail("Invalid admin credentials"))),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<structs::Account>::fail(e.to_string()))),
     }
 }
 

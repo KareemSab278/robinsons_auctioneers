@@ -52,7 +52,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     load();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   if (!user) {
@@ -107,7 +106,6 @@ export default function DashboardPage() {
           <Tabs.Tab value="won">Won Auctions ({wonAuctions.length})</Tabs.Tab>
         </Tabs.List>
 
-        {/* ---- My Auctions ---- */}
         <Tabs.Panel value="my-auctions">
           {myAuctions.length === 0 ? (
             <Center py="xl">
@@ -203,7 +201,6 @@ export default function DashboardPage() {
           )}
         </Tabs.Panel>
 
-        {/* ---- Won Auctions ---- */}
         <Tabs.Panel value="won">
           {wonAuctions.length === 0 ? (
             <Center py="xl">

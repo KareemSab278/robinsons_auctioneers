@@ -30,6 +30,7 @@ pub struct Account {
     pub email: String,
     // pub password_hash: String,
     pub created_at: String,
+    pub is_admin: bool,
 }
 
 #[derive(Serialize)]
@@ -86,5 +87,10 @@ pub struct CreateUserReq {
 #[derive(Deserialize)]
 pub struct UpdateUserReq {
     pub email: String,
+    pub password: String,
+}
+
+pub struct AdminLoginReq {
+    pub username: String,
     pub password: String,
 }

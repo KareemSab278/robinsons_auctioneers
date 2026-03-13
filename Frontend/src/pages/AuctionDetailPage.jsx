@@ -47,7 +47,6 @@ export default function AuctionDetailPage() {
 
   useEffect(() => {
     load();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (loading) {
@@ -95,7 +94,6 @@ export default function AuctionDetailPage() {
         {auction.description && <Text c="dimmed">{auction.description}</Text>}
       </Stack>
 
-      {/* Price + bid action */}
       <Paper withBorder p="xl" mb="xl" radius="md">
         <Group justify="space-between" align="flex-start">
           <Stack gap={4}>
@@ -137,7 +135,6 @@ export default function AuctionDetailPage() {
         </Group>
       </Paper>
 
-      {/* Bid history */}
       {sortedBids.length > 0 && (
         <Stack gap="sm">
           <Title order={4}>Bid History</Title>

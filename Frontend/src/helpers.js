@@ -20,6 +20,7 @@ export {
   getUserWonAuctions,
   login,
   register,
+  adminLogin,
 };
 
 const request = async (path, options = {}) => {
@@ -39,7 +40,6 @@ const request = async (path, options = {}) => {
   return body.data;
 };
 
-// --- Auctions ---
 const getActiveAuctions = async () => {
   return await request("/api/auctions/active");
 };
@@ -78,7 +78,6 @@ const endAuction = async (id) => {
   return await request(`/api/auctions/${id}/end`, { method: "POST" });
 };
 
-// --- Bids ---
 const getBidsForAuction = async (auctionId) => {
   return await request(`/api/auctions/${auctionId}/bids`);
 };
@@ -98,7 +97,6 @@ const deleteBid = async (bidId) => {
   return await request(`/api/bids/${bidId}`, { method: "DELETE" });
 };
 
-// --- Users ---
 const getUserByUsername = async (username) => {
   return await request(`/api/users/${username}`);
 };
@@ -122,7 +120,6 @@ const getUserWonAuctions = async (id) => {
   return await request(`/api/users/${id}/won`);
 };
 
-// --- Auth ---
 const login = async (data) => {
   return await request("/api/login", {
     method: "POST",
@@ -132,6 +129,13 @@ const login = async (data) => {
 
 const register = async (data) => {
   return await request("/api/register", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+};
+
+const adminLogin = async (data) => {
+  return await request("/api/admin/login", {
     method: "POST",
     body: JSON.stringify(data),
   });

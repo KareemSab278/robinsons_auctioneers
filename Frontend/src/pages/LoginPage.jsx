@@ -15,7 +15,7 @@ import { notifications } from '@mantine/notifications';
 import { useNavigate } from 'react-router-dom';
 import { IconUser, IconMail, IconLock, IconGavel } from '@tabler/icons-react';
 import { useAuth } from '../context/AuthContext';
-import { login, register } from '../helpers';
+import { login, register, adminLogin } from '../helpers';
 
 export default function LoginPage() {
   const { signIn } = useAuth();
@@ -58,7 +58,6 @@ export default function LoginPage() {
   });
 
   const handleRegister = registerForm.onSubmit(async (values) => {
-    // eslint-disable-next-line no-unused-vars
     const { confirmPassword, ...data } = values;
     try {
       const userData = await register(data);
@@ -78,6 +77,29 @@ export default function LoginPage() {
     }
   });
 
+  const adminForm = useForm({
+    initialValues: { username: '', password: '' },
+    validate: {
+      username: (val) => (val.trim().length < 1 ? 'Username is required' : null),
+      password: (val) => (val.length < 1 ? 'Password is required' : null),
+    },
+  });
+
+  const handleAdminLogin = adminForm.onSubmit(async (values) => {
+    try {
+      const userData = await adminLogin(values);
+      signIn(userData);
+      notifications.show({
+        title: 'Welcome, Admin',
+        message: `Signed in as ${userData.username}`,
+        color: 'teal',
+      });
+      navigate('/admin');
+    } catch (err) {
+      notifications.show({ title: 'Admin login failed', message: err.message, color: 'red' });
+    }
+  });
+
   return (
     <Container size={420} pt={60}>
       <Stack align="center" mb="xl" gap="xs">
@@ -93,9 +115,9 @@ export default function LoginPage() {
           <Tabs.List grow mb="xl">
             <Tabs.Tab value="login">Sign In</Tabs.Tab>
             <Tabs.Tab value="register">Register</Tabs.Tab>
+            <Tabs.Tab value="admin">Admin</Tabs.Tab>
           </Tabs.List>
 
-          {/* ---- Login ---- */}
           <Tabs.Panel value="login">
             <form onSubmit={handleLogin}>
               <Stack gap="sm">
@@ -118,7 +140,6 @@ export default function LoginPage() {
             </form>
           </Tabs.Panel>
 
-          {/* ---- Register ---- */}
           <Tabs.Panel value="register">
             <form onSubmit={handleRegister}>
               <Stack gap="sm">
@@ -148,6 +169,28 @@ export default function LoginPage() {
                 />
                 <Button type="submit" fullWidth mt="xs">
                   Create Account
+                </Button>
+              </Stack>
+            </form>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="admin">
+            <form onSubmit={handleAdminLogin}>
+              <Stack gap="sm">
+                <TextInput
+                  label="Admin Username"
+                  placeholder="admin_username"
+                  leftSection={<IconUser size={16} />}
+                  {...adminForm.getInputProps('username')}
+                />
+                <PasswordInput
+                  label="Password"
+                  placeholder="••••••••"
+                  leftSection={<IconLock size={16} />}
+                  {...adminForm.getInputProps('password')}
+                />
+                <Button type="submit" fullWidth mt="xs" color="teal">
+                  Admin Sign In
                 </Button>
               </Stack>
             </form>

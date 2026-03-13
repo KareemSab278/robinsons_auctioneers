@@ -99,6 +99,7 @@ pub fn get_user_by_id(conn: &Connection, user_id: i64) -> Result<Option<structs:
             email: row.get(2)?,
             // password_hash: row.get(3)?,
             created_at: row.get(4)?,
+            is_admin: false,
         })
     })
     .optional()
@@ -114,6 +115,7 @@ pub fn get_user_by_username(conn: &Connection, username: &str) -> Result<Option<
                 username: row.get(1)?,
                 email: row.get(2)?,
                 created_at: row.get(4)?,
+                is_admin: false,
             },
             row.get::<_, String>(3)?,
         ))
@@ -135,6 +137,7 @@ pub fn authenticate_user(conn: &Connection, username: &str, password_hash: &str)
             email: row.get(2)?,
             // password_hash: row.get(3)?,
             created_at: row.get(4)?,
+            is_admin: false,
         })
     })
     .optional()
@@ -154,6 +157,14 @@ pub fn get_auction_by_id(conn: &Connection, auction_id: i64) -> Result<Option<st
             end_time: row.get(7)?,
             is_active: row.get(8)?,
         })
+    })
+    .optional()
+}
+
+pub fn get_admin_by_username(conn: &Connection, username: &str) -> Result<Option<(i64, String)>> {
+    let mut stmt = conn.prepare(queries::GET_ADMIN_BY_USERNAME)?;
+    stmt.query_row(params![username], |row| {
+        Ok((row.get::<_, i64>(0)?, row.get::<_, String>(2)?))
     })
     .optional()
 }
