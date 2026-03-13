@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use crate::queries;
 
-pub const DB_FILE: &str = "app/robinsons_auctioneers.db";
+pub const DB_FILE: &str = "robinsons_auctioneers.db";
 
 
 fn db_path(file: &str) -> PathBuf {
