@@ -1,0 +1,159 @@
+import {
+  Container,
+  Paper,
+  Tabs,
+  TextInput,
+  PasswordInput,
+  Button,
+  Stack,
+  Title,
+  Text,
+  Group,
+} from '@mantine/core';
+import { useForm } from '@mantine/form';
+import { notifications } from '@mantine/notifications';
+import { useNavigate } from 'react-router-dom';
+import { IconUser, IconMail, IconLock, IconGavel } from '@tabler/icons-react';
+import { useAuth } from '../context/AuthContext';
+import { login, register } from '../helpers';
+
+export default function LoginPage() {
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
+
+  const loginForm = useForm({
+    initialValues: { username: '', password: '' },
+    validate: {
+      username: (val) => (val.trim().length < 1 ? 'Username is required' : null),
+      password: (val) => (val.length < 1 ? 'Password is required' : null),
+    },
+  });
+
+  const registerForm = useForm({
+    initialValues: { username: '', email: '', password: '', confirmPassword: '' },
+    validate: {
+      username: (val) =>
+        val.trim().length < 2 ? 'Username must be at least 2 characters' : null,
+      email: (val) => (/^\S+@\S+\.\S+$/.test(val) ? null : 'Invalid email'),
+      password: (val) =>
+        val.length < 6 ? 'Password must be at least 6 characters' : null,
+      confirmPassword: (val, values) =>
+        val !== values.password ? 'Passwords do not match' : null,
+    },
+  });
+
+  const handleLogin = loginForm.onSubmit(async (values) => {
+    try {
+      const userData = await login(values);
+      signIn(userData);
+      notifications.show({
+        title: 'Welcome back!',
+        message: `Signed in as ${userData.username}`,
+        color: 'teal',
+      });
+      navigate('/');
+    } catch (err) {
+      notifications.show({ title: 'Login failed', message: err.message, color: 'red' });
+    }
+  });
+
+  const handleRegister = registerForm.onSubmit(async (values) => {
+    // eslint-disable-next-line no-unused-vars
+    const { confirmPassword, ...data } = values;
+    try {
+      const userData = await register(data);
+      signIn(userData);
+      notifications.show({
+        title: 'Account created!',
+        message: "Welcome to Robinson's Auctioneers",
+        color: 'teal',
+      });
+      navigate('/');
+    } catch (err) {
+      notifications.show({
+        title: 'Registration failed',
+        message: err.message,
+        color: 'red',
+      });
+    }
+  });
+
+  return (
+    <Container size={420} pt={60}>
+      <Stack align="center" mb="xl" gap="xs">
+        <IconGavel size={44} color="var(--mantine-color-teal-5)" />
+        <Title order={2}>Robinson's Auctioneers</Title>
+        <Text c="dimmed" size="sm">
+          Sign in or create an account to start bidding
+        </Text>
+      </Stack>
+
+      <Paper withBorder shadow="md" p="xl" radius="md">
+        <Tabs defaultValue="login">
+          <Tabs.List grow mb="xl">
+            <Tabs.Tab value="login">Sign In</Tabs.Tab>
+            <Tabs.Tab value="register">Register</Tabs.Tab>
+          </Tabs.List>
+
+          {/* ---- Login ---- */}
+          <Tabs.Panel value="login">
+            <form onSubmit={handleLogin}>
+              <Stack gap="sm">
+                <TextInput
+                  label="Username"
+                  placeholder="your_username"
+                  leftSection={<IconUser size={16} />}
+                  {...loginForm.getInputProps('username')}
+                />
+                <PasswordInput
+                  label="Password"
+                  placeholder="••••••••"
+                  leftSection={<IconLock size={16} />}
+                  {...loginForm.getInputProps('password')}
+                />
+                <Button type="submit" fullWidth mt="xs">
+                  Sign In
+                </Button>
+              </Stack>
+            </form>
+          </Tabs.Panel>
+
+          {/* ---- Register ---- */}
+          <Tabs.Panel value="register">
+            <form onSubmit={handleRegister}>
+              <Stack gap="sm">
+                <TextInput
+                  label="Username"
+                  placeholder="your_username"
+                  leftSection={<IconUser size={16} />}
+                  {...registerForm.getInputProps('username')}
+                />
+                <TextInput
+                  label="Email"
+                  placeholder="you@example.com"
+                  leftSection={<IconMail size={16} />}
+                  {...registerForm.getInputProps('email')}
+                />
+                <PasswordInput
+                  label="Password"
+                  placeholder="••••••••"
+                  leftSection={<IconLock size={16} />}
+                  {...registerForm.getInputProps('password')}
+                />
+                <PasswordInput
+                  label="Confirm Password"
+                  placeholder="••••••••"
+                  leftSection={<IconLock size={16} />}
+                  {...registerForm.getInputProps('confirmPassword')}
+                />
+                <Button type="submit" fullWidth mt="xs">
+                  Create Account
+                </Button>
+              </Stack>
+            </form>
+          </Tabs.Panel>
+        </Tabs>
+      </Paper>
+    </Container>
+  );
+}
