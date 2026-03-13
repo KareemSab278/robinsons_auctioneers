@@ -69,10 +69,15 @@ pub async fn run() {
                 .allow_headers(tower_http::cors::Any)
         );
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let port: u16 = std::env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(3000);
+
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     let local_ip = get_local_ip();
 
-    println!("Server running on http://{}:3000", local_ip);
+    println!("Server running on http://{}:{}", local_ip, port);
 
     let listener = tokio::net::TcpListener
         ::bind(addr).await
