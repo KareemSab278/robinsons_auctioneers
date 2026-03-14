@@ -12,17 +12,16 @@ import {
   Table,
   Image,
   SimpleGrid,
+  Modal,
 } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
-import { notifications } from '@mantine/notifications';
-import { IconGavel, IconClock } from '@tabler/icons-react';
+import { IconGavel, IconClock, IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getAuctionById, getBidsForAuction, getAuctionImages } from '../helpers';
 import {BidModal} from '../components/BidModal';
 import { useAuth } from '../context/AuthContext';
 import { timeLeft, formatPrice } from '../utils';
-import ImageViewer from "react-simple-image-viewer";
+import { useDisclosure } from '@mantine/hooks';
 
 export { AuctionDetailPage };
 const AuctionDetailPage = () => {
@@ -35,19 +34,25 @@ const AuctionDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [bidOpened, { open: openBid, close: closeBid }] = useDisclosure(false);
 
-    const [currentImage, setCurrentImage] = useState(0);
+  const [currentImage, setCurrentImage] = useState(0);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
- 
+
   const openImageViewer = useCallback((index) => {
     setCurrentImage(index);
     setIsViewerOpen(true);
   }, []);
 
   const closeImageViewer = () => {
-    setCurrentImage(0);
     setIsViewerOpen(false);
   };
 
+  const showPrev = () => {
+    setCurrentImage((prev) => (prev === 0 ? auctionImages.length - 1 : prev - 1));
+  };
+
+  const showNext = () => {
+    setCurrentImage((prev) => (prev === auctionImages.length - 1 ? 0 : prev + 1));
+  };
 
   const load = async () => {
     try {
@@ -93,12 +98,11 @@ const AuctionDetailPage = () => {
 
   const currentPrice = auction.current_price ?? auction.starting_price;
   const isOwner = user?.account_id === auction.seller_id;
-  const canBid = user && auction.is_active && !isOwner;
+  const canBid = auction.is_active;
   const sortedBids = [...bids].sort((a, b) => b.bid_amount - a.bid_amount);
 
   return (
     <Container size="md" py="xl">
-      {/* Header */}
       <Stack gap="xs" mb="xl">
         <Group gap="sm">
           <Badge color={auction.is_active ? 'teal' : 'gray'} size="lg" variant="light">
@@ -131,16 +135,29 @@ const AuctionDetailPage = () => {
               />
             ))}
           </SimpleGrid>
-          {isViewerOpen && (
-            <ImageViewer
-              src={auctionImages.map((b64) => `data:image/jpeg;base64,${b64}`)}
-              currentIndex={currentImage}
-              onClose={closeImageViewer}
-              disableScroll={false}
-              backgroundStyle={{ backgroundColor: 'rgba(0,0,0,0.9)' }}
-              closeOnClickOutside={true}
+
+          <Modal
+            opened={isViewerOpen}
+            onClose={closeImageViewer}
+            size="auto"
+            padding="xl"
+            centered
+            overlayOpacity={0.7}
+          >
+            <Group position="apart" mb="md">
+              <Button variant="outline" size="xs" onClick={showPrev} leftIcon={<IconChevronLeft />}>
+                Prev
+              </Button>
+              <Button variant="outline" size="xs" onClick={showNext} rightIcon={<IconChevronRight />}>
+                Next
+              </Button>
+            </Group>
+            <Image
+              src={`data:image/jpeg;base64,${auctionImages[currentImage]}`}
+              radius="md"
+              fit="contain"
             />
-          )}
+          </Modal>
         </>
       )}
 
@@ -234,4 +251,4 @@ const AuctionDetailPage = () => {
       />
     </Container>
   );
-}
+};
