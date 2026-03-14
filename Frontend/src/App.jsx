@@ -21,9 +21,8 @@ const checkSession = async () => {
     }
     void (async () => {
       const sessionValid = await handleInvalidSession();
-      console.log("Session check result:", sessionValid);
+      
       if (!sessionValid) {
-        console.log("Session invalid, logging out.");
         window.location.href = "/login";
         notifications.show({
           title: "Session Expired",

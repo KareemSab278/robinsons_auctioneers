@@ -218,7 +218,6 @@ const handleInvalidSession = async () => {
       method: "POST",
       body: JSON.stringify({ session_expiry: expiry }),
     });
-    console.log("Session valid fn result:", sessionValid);
     return sessionValid; // true if valid, false if expired
   } catch {
     return false;
