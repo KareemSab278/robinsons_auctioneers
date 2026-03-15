@@ -183,14 +183,14 @@ const AuctionDetailPage = () => {
             <Text size="sm" c="dimmed">
               {bids.length} bid{bids.length !== 1 ? 's' : ''}
             </Text>
-            {canBid && (
-              <Button size="md" leftSection={<IconGavel size={18} />} onClick={openBid}>
-                Place Bid
-              </Button>
-            )}
             {!user && auction.is_active && (
               <Button variant="light" onClick={() => navigate('/login')}>
                 Sign in to bid
+              </Button>
+            )}
+            {canBid && user && (
+              <Button size="md" leftSection={<IconGavel size={18} />} onClick={openBid}>
+                Place Bid
               </Button>
             )}
             {isOwner && (
