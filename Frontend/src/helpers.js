@@ -1,4 +1,5 @@
-const BASE_URL = import.meta.env.VITE_API_URL;
+const DEBUG = import.meta.env.DEV; // checks if environment is dev of prod
+const BASE_URL = DEBUG ? 'http://192.168.0.190:3000' : import.meta.env.VITE_API_URL;
 
 export {
   getActiveAuctions,
@@ -34,16 +35,40 @@ const getSessionExpiry = () => {
   );
 };
 
+const getAuthToken = () => {
+  return JSON.parse(localStorage.getItem("signed_in_user"))?.token || null;
+};
+
 const request = async (path, options = {}) => {
   const expiry = getSessionExpiry();
+  const token = getAuthToken();
 
   const bodyObj = options.body ? JSON.parse(options.body) : {};
   if (expiry) bodyObj.session_expiry = expiry;
 
   const method = (options.method || "GET").toUpperCase();
 
+  const headers = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  if (DEBUG) {
+    console.log("[api] request", {
+      path,
+      method,
+      token: token ? "[redacted]" : null,
+      expiry,
+      body: bodyObj,
+    });
+  }
+
   const fetchOptions = {
-    headers: { "Content-Type": "application/json", ...options.headers },
+    headers,
     ...options,
   };
 
@@ -53,6 +78,15 @@ const request = async (path, options = {}) => {
 
   const res = await fetch(`${BASE_URL}${path}`, fetchOptions);
   const body = await res.json();
+
+  if (DEBUG) {
+    console.log("[api] response", {
+      path,
+      status: res.status,
+      ok: res.ok,
+      body,
+    });
+  }
 
   if (body.session_status === false) {
     localStorage.removeItem("signed_in_user");

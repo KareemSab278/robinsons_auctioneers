@@ -437,6 +437,18 @@ Vite embeds these values directly into the JavaScript bundle at build time. They
 
 When deployed to Vercel, these same variables must be set in the Vercel project's environment variable settings.
 
+#### Backend environment variables (Rust)
+
+The backend also supports a `.env` file (it is loaded automatically on startup via `dotenvy`). The backend expects the following variable:
+
+```
+JWT_SECRET=your-super-secret-key
+```
+
+This secret is used to sign and verify JWT tokens that are issued during login/registration. If it is not set, the backend will fall back to a default secret (`secret_key`), which is fine for local dev but should not be used in production.
+
+There is an example file at `Backend/.env.example` showing the expected values.
+
 ### File by File Explanation (Frontend)
 
 #### `src/main.jsx`
@@ -625,17 +637,44 @@ The Docker image is used when running locally via docker-compose. On Vercel, the
 
 ## 7. Session Management
 
-Sessions are simple expiry timestamps. There is no session table in the database and no session tokens.
+The app uses a hybrid session mechanism: a simple expiry timestamp is stored on the client, and a signed JWT is also issued and stored as a “token”.
 
-When a user logs in successfully, the backend calls `authentication::new_session_expiry()` which returns a timestamp 1 hour in the future as an RFC 3339 string (e.g. `"2026-03-13T15:00:00+00:00"`). This timestamp is included in the account data returned to the frontend.
+### How it works (JWT + expiry timestamp)
 
-The frontend stores this timestamp inside the user object in `localStorage`. Every time a state-changing API call is made (bid, create auction, delete, etc.), the frontend automatically includes `session_expiry` in the request body (injected by the `request()` function in `helpers.js`). The backend then calls `authentication::session_valid()` to check it. If the timestamp is in the past, the server returns a 401 response with `session_status: false`.
+When a user logs in or registers successfully, the backend returns an account object that includes both:
 
-When `helpers.js` detects `session_status: false` in any response, it immediately removes the user from `localStorage` and redirects to the login page.
+- `session_expiry` — an RFC 3339 timestamp that expires in 1 hour.
+- `token` — a JSON Web Token (JWT) signed with a secret (`JWT_SECRET`).
 
-Additionally, `App.jsx` runs a background check every 5 minutes using the frontend's own clock (no API call). If the stored session expiry has already passed, the user is redirected to login.
+The frontend saves the full user object in `localStorage` (see `AuthContext.jsx`).
 
-Sessions last 1 hour. There is no refresh mechanism - the user must log in again after an hour.
+### What the frontend sends on every API request
+
+The `request()` helper in `helpers.js` does two things automatically:
+
+1. It injects the `session_expiry` timestamp into the JSON request body.
+2. It sends the JWT in an `Authorization: Bearer <token>` header.
+
+So the backend can validate either value.
+
+### How the backend validates sessions
+
+The backend uses `authentication::session_valid()` for all protected endpoints. That function:
+
+- First tries to parse the value as an RFC 3339 timestamp and checks that it is still in the future.
+- If that fails, it treats the value as a JWT and verifies it using the configured `JWT_SECRET`.
+
+This means the current system supports both the original timestamp-based session logic and the newer JWT-based tokens.
+
+If validation fails, the API returns `session_status: false`.
+
+When the frontend sees `session_status: false`, it clears the stored user and redirects to the login page.
+
+### Frontend debug logging
+
+The frontend includes debug logging for request/response payloads, but it only runs when `import.meta.env.DEV` is true (i.e., during development with `npm run dev`). In production builds (e.g., `npm run build`), `import.meta.env.DEV` becomes false and the logs are suppressed.
+
+---
 
 ---
 

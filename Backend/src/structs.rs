@@ -32,6 +32,8 @@ pub struct Account {
     pub created_at: String,
     pub is_admin: bool,
     pub session_expiry: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token: Option<String>,
 }
 
 #[derive(Serialize)]

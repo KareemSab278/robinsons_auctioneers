@@ -15,6 +15,7 @@ use axum::{
 };
 use tower_http::cors::CorsLayer;
 use axum::http::Method;
+use dotenvy::dotenv;
 use std::net::{ SocketAddr, UdpSocket };
 
 use base64::Engine as _;
@@ -342,6 +343,12 @@ async fn login(Json(payload): Json<structs::AuthReq>) -> impl IntoResponse {
                 Ok(true) => {
                     let mut authed_user = user;
                     authed_user.session_expiry = authentication::new_session_expiry();
+
+                    match authentication::generate_jwt(authed_user.account_id, 60 * 60) {
+                        Ok(token) => authed_user.token = Some(token),
+                        Err(_) => authed_user.token = None,
+                    }
+
                     (StatusCode::OK, Json(ApiResponse::ok(authed_user)))
                 }
                 _ => (StatusCode::UNAUTHORIZED, Json(ApiResponse::<structs::Account>::fail("Invalid credentials"))),
@@ -374,6 +381,12 @@ async fn register(Json(payload): Json<structs::CreateUserReq>) -> impl IntoRespo
         Ok(user) => {
             let mut registered_user = user;
             registered_user.session_expiry = authentication::new_session_expiry();
+
+            match authentication::generate_jwt(registered_user.account_id, 60 * 60) {
+                Ok(token) => registered_user.token = Some(token),
+                Err(_) => registered_user.token = None,
+            }
+
             (StatusCode::OK, Json(ApiResponse::ok(registered_user)))
         }
         Err(e) =>
@@ -403,8 +416,14 @@ async fn create_admin(Json(payload): Json<structs::CreateAdminReq>) -> impl Into
         username: payload.username,
         password: payload.password,
     };
-    match database::open_connection().and_then(|conn| authentication::create_admin(&conn, auth_req)) {
-        Ok(admin) => (StatusCode::OK, Json(ApiResponse::ok(admin))),
+    match database::open_connection() {
+        Ok(conn) => match authentication::create_admin(&conn, auth_req) {
+            Ok(admin) => (StatusCode::OK, Json(ApiResponse::ok(admin))),
+            Err(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<structs::Admin>::fail(e)),
+            ),
+        },
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ApiResponse::<structs::Admin>::fail(e.to_string())),
@@ -418,14 +437,20 @@ async fn admin_login(Json(payload): Json<structs::AuthReq>) -> impl IntoResponse
             // if there is an admin then see if the password is correct with the one in the db
             match bcrypt::verify(&payload.password, &stored_hash) {
                 Ok(true) => {
-                    let admin_account = structs::Account {
+                    let mut admin_account = structs::Account {
                         account_id: admin_id,
                         username: payload.username,
                         email: String::new(),
                         created_at: String::new(),
                         is_admin: true,
                         session_expiry: authentication::new_session_expiry(),
+                        token: None,
                     };
+
+                    if let Ok(token) = authentication::generate_jwt(admin_id, 60 * 60) {
+                        admin_account.token = Some(token);
+                    }
+
                     (StatusCode::OK, Json(ApiResponse::ok(admin_account)))
                 }
                 _ => (StatusCode::UNAUTHORIZED, Json(ApiResponse::<structs::Account>::fail("Invalid admin credentials"))),
@@ -462,7 +487,6 @@ async fn upload_auction_image(
             Json(ApiResponse::<i64>::fail_with_session("Session expired", false)),
         );
     }
-    // i think i need a loop here to go over the array of images and insert them one by one
 
     let conn = match database::open_connection() {
         Ok(c) => c,
@@ -501,5 +525,9 @@ async fn upload_auction_image(
 
 #[tokio::main]
 async fn main() {
+    // Load environment variables from `.env` (if present).
+    // This is helpful for local development, and `.env` is already ignored via .gitignore.
+    dotenv().ok();
+
     run().await;
 }

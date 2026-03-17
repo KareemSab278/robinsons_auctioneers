@@ -1,76 +1,86 @@
-use chrono::{DateTime, Duration, Utc};
-use crate::{structs, queries};
-use rusqlite::{Connection, OptionalExtension, Result, params};
+use crate::{crud, structs};
+use chrono::{DateTime, Duration as ChronoDuration, Utc};
+use hmac::{Hmac, Mac};
+use jwt::{SignWithKey, VerifyWithKey};
+use rusqlite::Connection;
+use sha2::Sha256;
+use std::collections::BTreeMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-const SESSION_DURATION_HOURS: i64 = 1;
+const SESSION_DURATION_SECS: u64 = 60 * 60; // 1 hour
 
-pub fn session_valid(session_expiry: &str) -> bool {
-    match DateTime::parse_from_rfc3339(session_expiry) {
-        Ok(expiry) => Utc::now() < expiry,
-        Err(_) => false,
+type HmacSha256 = Hmac<Sha256>;
+
+fn jwt_secret() -> Vec<u8> {
+    std::env::var("JWT_SECRET")
+        .unwrap_or_else(|_| "secret_key".to_string())
+        .into_bytes()
+}
+
+fn jwt_key() -> HmacSha256 {
+    HmacSha256::new_from_slice(&jwt_secret()).expect("JWT_SECRET must be a valid key")
+}
+
+pub fn generate_jwt(user_id: i64, duration_secs: u64) -> Result<String, String> {
+    let key = jwt_key();
+
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| e.to_string())?
+        .as_secs();
+
+    let mut claims = BTreeMap::new();
+    claims.insert("user_id".to_string(), user_id.to_string());
+    claims.insert("exp".to_string(), (now + duration_secs).to_string());
+
+    claims.sign_with_key(&key).map_err(|e| e.to_string())
+}
+
+pub fn validate_jwt(token: &str) -> Result<BTreeMap<String, String>, String> {
+    let key = jwt_key();
+    let claims: BTreeMap<String, String> = token.verify_with_key(&key).map_err(|e| e.to_string())?;
+
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| e.to_string())?
+        .as_secs();
+
+    let exp = claims
+        .get("exp")
+        .ok_or_else(|| "missing exp claim".to_string())
+        .and_then(|v| v.parse::<u64>().map_err(|e| e.to_string()))?;
+
+    if exp < now {
+        Err("token expired".to_string())
+    } else {
+        Ok(claims)
     }
 }
 
+/// returns ISO-8601 session expiry string, used by the frontend session validation.
 pub fn new_session_expiry() -> String {
-    (Utc::now() + Duration::hours(SESSION_DURATION_HOURS)).to_rfc3339()
+    (Utc::now() + ChronoDuration::seconds(SESSION_DURATION_SECS as i64)).to_rfc3339()
 }
 
-
-pub fn user_sign_in(conn: &Connection, auth_req: structs::AuthReq) -> Result<Option<structs::Account>> {
-    let mut stmt = conn.prepare(queries::GET_USER_BY_USERNAME)?;
-    let result = stmt.query_row(params![auth_req.username], |row| {
-        Ok((
-            structs::Account {
-                account_id: row.get(0)?,
-                username: row.get(1)?,
-                email: row.get(2)?,
-                created_at: row.get(4)?,
-                session_expiry: new_session_expiry(),
-                is_admin: false,
-            },
-            row.get::<_, String>(3)?,
-        ))
-    }).optional()?;
-
-    match result {
-        Some((account, stored_hash)) => {
-            match bcrypt::verify(&auth_req.password, &stored_hash) {
-                Ok(true) => Ok(Some(account)),
-                _ => Ok(None),
-            }
-        }
-        None => Ok(None),
+pub fn session_valid(session_value: &str) -> bool {
+    if session_value.trim().is_empty() {
+        return false;
     }
-}
 
-pub fn admin_sign_in(conn: &Connection, auth_req: structs::AuthReq) -> Result<Option<structs::Admin>> {
-    let mut stmt = conn.prepare(queries::GET_ADMIN_BY_USERNAME)?;
-    let result = stmt.query_row(params![auth_req.username], |row| {
-        Ok((
-            row.get::<_, i64>(0)?,
-            row.get::<_, String>(1)?,
-            row.get::<_, String>(2)?,
-        ))
-    }).optional()?;
-
-    match result {
-        Some((admin_id, username, stored_hash)) => {
-            match bcrypt::verify(&auth_req.password, &stored_hash) {
-                Ok(true) => Ok(Some(structs::Admin { admin_id, username })),
-                _ => Ok(None),
-            }
-        }
-        None => Ok(None),
+    if let Ok(dt) = DateTime::parse_from_rfc3339(session_value) {
+        return dt > Utc::now();
     }
+
+    validate_jwt(session_value).is_ok()
 }
 
-pub fn create_admin(conn: &Connection, auth_req: structs::AuthReq) -> Result<structs::Admin> {
-    let password_hash = bcrypt::hash(&auth_req.password, bcrypt::DEFAULT_COST)
-        .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
-    conn.execute(queries::CREATE_ADMIN, params![auth_req.username, password_hash])?;
-    let admin_id = conn.last_insert_rowid();
+pub fn create_admin(conn: &Connection, auth_req: structs::AuthReq) -> Result<structs::Admin, String> {
+    let password_hash = bcrypt::hash(&auth_req.password, bcrypt::DEFAULT_COST).map_err(|e| e.to_string())?;
+    let admin_id = crud::create_admin(conn, &auth_req.username, &password_hash).map_err(|e| e.to_string())?;
+
     Ok(structs::Admin {
         admin_id,
         username: auth_req.username,
     })
 }
+

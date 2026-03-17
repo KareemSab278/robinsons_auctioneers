@@ -101,6 +101,7 @@ pub fn get_user_by_id(conn: &Connection, user_id: i64) -> Result<Option<structs:
             created_at: row.get(4)?,
             is_admin: false,
             session_expiry: String::new(),
+            token: None,
         })
     })
     .optional()
@@ -118,6 +119,7 @@ pub fn get_user_by_username(conn: &Connection, username: &str) -> Result<Option<
                 created_at: row.get(4)?,
                 is_admin: false,
                 session_expiry: String::new(),
+                token: None,
             },
             row.get::<_, String>(3)?,
         ))
@@ -141,6 +143,7 @@ pub fn authenticate_user(conn: &Connection, username: &str, password_hash: &str)
             created_at: row.get(4)?,
             is_admin: false,
             session_expiry: String::new(),
+            token: None,
         })
     })
     .optional()
@@ -222,6 +225,11 @@ pub fn admin_delete_user(conn: &Connection, user_id: i64) -> Result<()> {
 pub fn bootstrap_admin(conn: &Connection, username: &str, password_hash: &str) -> Result<()> {
     conn.execute(queries::BOOTSTRAP_ADMIN, params![username, password_hash])?;
     Ok(())
+}
+
+pub fn create_admin(conn: &Connection, username: &str, password_hash: &str) -> Result<i64> {
+    conn.execute(queries::CREATE_ADMIN, params![username, password_hash])?;
+    Ok(conn.last_insert_rowid())
 }
 
 pub fn user_delete_auction(conn: &Connection, auction_id: i64, user_id: i64) -> Result<bool> {

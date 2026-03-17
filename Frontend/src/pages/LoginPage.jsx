@@ -45,8 +45,10 @@ const LoginPage = () => {
   });
 
   const handleLogin = loginForm.onSubmit(async (values) => {
+    console.log("[login] submitting", values);
     try {
       const userData = await login(values);
+      console.log("[login] response", userData);
       signIn(userData);
       notifications.show({
         title: 'Welcome back!',
@@ -55,14 +57,17 @@ const LoginPage = () => {
       });
       navigate('/');
     } catch (err) {
+      console.error("[login] error", err);
       notifications.show({ title: 'Login failed', message: err.message, color: 'red' });
     }
   });
 
   const handleRegister = registerForm.onSubmit(async (values) => {
     const { confirmPassword, ...data } = values;
+    console.log("[register] submitting", data);
     try {
       const userData = await register(data);
+      console.log("[register] response", userData);
       signIn(userData);
       notifications.show({
         title: 'Account created!',
@@ -71,6 +76,7 @@ const LoginPage = () => {
       });
       navigate('/');
     } catch (err) {
+      console.error("[register] error", err);
       notifications.show({
         title: 'Registration failed',
         message: err.message,

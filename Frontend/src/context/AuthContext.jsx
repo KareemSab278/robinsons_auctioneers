@@ -15,8 +15,10 @@ const AuthProvider = ({ children }) => {
   });
 
   const signIn = (userData) => {
+    console.log("[auth] signIn", userData);
     setUser(userData);
     localStorage.setItem("signed_in_user", JSON.stringify(userData));
+    console.log("[auth] stored in localStorage", localStorage.getItem("signed_in_user"));
   }
 
   const signOut = () => {
