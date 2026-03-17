@@ -36,6 +36,7 @@ pub fn generate_jwt(user_id: i64, duration_secs: u64) -> Result<String, String> 
     claims.sign_with_key(&key).map_err(|e| e.to_string())
 }
 
+// used btreemap because the jwt crate wants it like that. hmaps are better (o(1) while btreemap is o(log n)) imo but the creators of the jwt crate know better
 pub fn validate_jwt(token: &str) -> Result<BTreeMap<String, String>, String> {
     let key = jwt_key();
     let claims: BTreeMap<String, String> = token.verify_with_key(&key).map_err(|e| e.to_string())?;

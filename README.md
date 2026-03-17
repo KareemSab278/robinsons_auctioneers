@@ -383,8 +383,27 @@ The `ApiResponse<T>` struct is generic - the `data` field can hold any type (a l
 | POST | `/api/admin/login` | Logs in as admin. | No |
 | POST | `/api/admin/create` | Creates a new admin account. | Yes (session_expiry) |
 | POST | `/api/admin/bootstrap` | Creates the first admin if it does not already exist. | No |
+| GET | `/api/auctions/:id/images` | Returns all images for an auction (base64-encoded). | No |
+| POST | `/api/auctions/:id/images` | Uploads one or more images for an auction. | Yes (session_expiry) |
 
 The `bootstrap` endpoint is special. It uses `INSERT OR IGNORE`, meaning it only inserts the admin row if one with that username does not already exist. This lets the frontend safely call it on every admin login attempt without creating duplicate records.
+
+### Image Upload (Backend)
+
+The backend stores auction images directly in the database as blobs. The `auction_images` table has this schema:
+
+- `image_id` (primary key)
+- `auction_id` (foreign key to auctions)
+- `image_data` (BLOB)
+
+When the frontend uploads images, it sends them as base64-encoded strings, and the backend decodes them into binary before storing.
+
+The two endpoints are:
+
+- **GET `/api/auctions/:id/images`**: returns an array of base64 strings (one per image).
+- **POST `/api/auctions/:id/images`**: accepts a JSON payload like `{ "image_data": ["<base64>", "<base64>"] }` and stores each image (up to a max of 8 images per auction).
+
+The backend enforces a maximum number of images per auction using the constant `MAX_IMAGES_PER_AUCTION`.
 
 ### How the Docker Image Works (Backend)
 

@@ -10,12 +10,13 @@ use axum::{
     routing::{ get, post, put, delete },
     extract::{ Path, Json },
     response::IntoResponse,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     Router,
 };
 use tower_http::cors::CorsLayer;
 use axum::http::Method;
 use dotenvy::dotenv;
+use std::borrow::Cow;
 use std::net::{ SocketAddr, UdpSocket };
 
 use base64::Engine as _;
@@ -99,8 +100,23 @@ async fn health() -> impl IntoResponse {
     Json(ApiResponse::ok("ok"))
 }
 
-async fn session_check(Json(payload): Json<structs::SessionReq>) -> impl IntoResponse {
-    let valid = authentication::session_valid(&payload.session_expiry);
+fn auth_value<'a>(headers: &HeaderMap, session_expiry: &'a str) -> Cow<'a, str> {
+    if let Some(auth_value) = headers.get("authorization") {
+        if let Ok(auth_str) = auth_value.to_str() {
+            if let Some(tok) = auth_str.strip_prefix("Bearer ") {
+                return Cow::Owned(tok.to_string());
+            }
+        }
+    }
+    Cow::Borrowed(session_expiry)
+}
+
+async fn session_check(
+    headers: HeaderMap,
+    Json(payload): Json<structs::SessionReq>,
+) -> impl IntoResponse {
+    let session_value = auth_value(&headers, &payload.session_expiry);
+    let valid = authentication::session_valid(&session_value);
     Json(ApiResponse::<bool>::session_passed(valid))
     // returns true if session is valid, false if expired or invalid format
 }
@@ -171,10 +187,12 @@ async fn create_auction(Json(payload): Json<structs::CreateAuctionReq>) -> impl 
 }
 
 async fn update_auction(
+    headers: HeaderMap,
     Path(id): Path<i64>,
     Json(payload): Json<structs::UpdateAuctionReq>
 ) -> impl IntoResponse {
-    if !authentication::session_valid(&payload.session_expiry) {
+    let session_value = auth_value(&headers, &payload.session_expiry);
+    if !authentication::session_valid(&session_value) {
         return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<bool>::fail_with_session("Session expired", false)),
 );
     }
@@ -200,8 +218,13 @@ async fn update_auction(
     }
 }
 
-async fn delete_auction(Path(id): Path<i64>, Json(payload): Json<structs::SessionReq>) -> impl IntoResponse {
-    if !authentication::session_valid(&payload.session_expiry) {
+async fn delete_auction(
+    headers: HeaderMap,
+    Path(id): Path<i64>,
+    Json(payload): Json<structs::SessionReq>
+) -> impl IntoResponse {
+    let session_value = auth_value(&headers, &payload.session_expiry);
+    if !authentication::session_valid(&session_value) {
         return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<&str>::fail_with_session("Session expired", false)),
 );
     }
@@ -212,8 +235,13 @@ async fn delete_auction(Path(id): Path<i64>, Json(payload): Json<structs::Sessio
     }
 }
 
-async fn end_auction(Path(id): Path<i64>, Json(payload): Json<structs::SessionReq>) -> impl IntoResponse {
-    if !authentication::session_valid(&payload.session_expiry) {
+async fn end_auction(
+    headers: HeaderMap,
+    Path(id): Path<i64>,
+    Json(payload): Json<structs::SessionReq>
+) -> impl IntoResponse {
+    let session_value = auth_value(&headers, &payload.session_expiry);
+    if !authentication::session_valid(&session_value) {
         return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<&str>::fail_with_session("Session expired", false)),
 );
     }
@@ -246,8 +274,12 @@ async fn get_max_bid(Path(id): Path<i64>) -> impl IntoResponse {
     }
 }
 
-async fn place_bid(Json(payload): Json<structs::PlaceBidReq>) -> impl IntoResponse {
-    if !authentication::session_valid(&payload.session_expiry) {
+async fn place_bid(
+    headers: HeaderMap,
+    Json(payload): Json<structs::PlaceBidReq>
+) -> impl IntoResponse {
+    let session_value = auth_value(&headers, &payload.session_expiry);
+    if !authentication::session_valid(&session_value) {
         return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<i64>::fail_with_session("Session expired", false)),
 );
     }
@@ -264,8 +296,13 @@ async fn place_bid(Json(payload): Json<structs::PlaceBidReq>) -> impl IntoRespon
     }
 }
 
-async fn delete_bid(Path(id): Path<i64>, Json(payload): Json<structs::SessionReq>) -> impl IntoResponse {
-    if !authentication::session_valid(&payload.session_expiry) {
+async fn delete_bid(
+    headers: HeaderMap,
+    Path(id): Path<i64>,
+    Json(payload): Json<structs::SessionReq>
+) -> impl IntoResponse {
+    let session_value = auth_value(&headers, &payload.session_expiry);
+    if !authentication::session_valid(&session_value) {
         return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<bool>::fail_with_session("Session expired", false)),
 );
     }
@@ -291,10 +328,12 @@ async fn get_user_by_id(Path(id): Path<i64>) -> impl IntoResponse {
 }
 
 async fn update_user(
+    headers: HeaderMap,
     Path(id): Path<i64>,
     Json(payload): Json<structs::UpdateUserReq>
 ) -> impl IntoResponse {
-    if !authentication::session_valid(&payload.session_expiry) {
+    let session_value = auth_value(&headers, &payload.session_expiry);
+    if !authentication::session_valid(&session_value) {
         return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<bool>::fail_with_session("Session expired", false)),
 );
     }
@@ -313,8 +352,13 @@ async fn update_user(
     }
 }
 
-async fn delete_user(Path(id): Path<i64>, Json(payload): Json<structs::SessionReq>) -> impl IntoResponse {
-    if !authentication::session_valid(&payload.session_expiry) {
+async fn delete_user(
+    headers: HeaderMap,
+    Path(id): Path<i64>,
+    Json(payload): Json<structs::SessionReq>
+) -> impl IntoResponse {
+    let session_value = auth_value(&headers, &payload.session_expiry);
+    if !authentication::session_valid(&session_value) {
         return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<&str>::fail_with_session("Session expired", false)),
 );
     }
@@ -405,8 +449,12 @@ async fn bootstrap_admin(Json(payload): Json<structs::AuthReq>) -> impl IntoResp
     }
 }
 
-async fn create_admin(Json(payload): Json<structs::CreateAdminReq>) -> impl IntoResponse {
-    if !authentication::session_valid(&payload.session_expiry) {
+async fn create_admin(
+    headers: HeaderMap,
+    Json(payload): Json<structs::CreateAdminReq>
+) -> impl IntoResponse {
+    let session_value = auth_value(&headers, &payload.session_expiry);
+    if !authentication::session_valid(&session_value) {
         return (
             StatusCode::UNAUTHORIZED,
             Json(ApiResponse::<structs::Admin>::fail_with_session("Session expired", false)),
@@ -478,10 +526,12 @@ async fn get_auction_images_handler(Path(id): Path<i64>) -> impl IntoResponse {
 }
 
 async fn upload_auction_image(
+    headers: HeaderMap,
     Path(id): Path<i64>,
     Json(payload): Json<structs::UploadImageReq>,
 ) -> impl IntoResponse {
-    if !authentication::session_valid(&payload.session_expiry) {
+    let session_value = auth_value(&headers, &payload.session_expiry);
+    if !authentication::session_valid(&session_value) {
         return (
             StatusCode::UNAUTHORIZED,
             Json(ApiResponse::<i64>::fail_with_session("Session expired", false)),
@@ -525,9 +575,6 @@ async fn upload_auction_image(
 
 #[tokio::main]
 async fn main() {
-    // Load environment variables from `.env` (if present).
-    // This is helpful for local development, and `.env` is already ignored via .gitignore.
     dotenv().ok();
-
     run().await;
 }

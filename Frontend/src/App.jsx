@@ -10,18 +10,22 @@ import { useEffect } from "react";
 import { handleInvalidSession } from "./helpers";
 import { notifications } from "@mantine/notifications";
 
+const DEBUG = import.meta.env.DEV; // checks if environment is dev of prod
+
 export { App };
 
 const SESSION_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 const checkSession = async () => {
+  DEBUG && console.log("Setting up session check interval");
   const interval = setInterval(() => {
      if (window.location.pathname === "/login") {
       return;
     }
     void (async () => {
+      DEBUG && console.log("Checking session validity...");
       const sessionValid = await handleInvalidSession();
-      
+      DEBUG && console.log("Session:", sessionValid);
       if (!sessionValid) {
         window.location.href = "/login";
         notifications.show({
