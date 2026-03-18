@@ -1,4 +1,4 @@
-import { Modal, TextInput, Textarea, NumberInput, Button, Stack, Group, FileInput, Text } from '@mantine/core';
+import { Modal, TextInput, Textarea, NumberInput, Button, Stack, Group, FileInput, Text, LoadingOverlay } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
@@ -12,6 +12,7 @@ const MAX_IMAGES = 5;
 const CreateAuctionModal = ({ opened, onClose, onCreated }) => {
   const { user } = useAuth();
   const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const form = useForm({
     initialValues: {
@@ -53,10 +54,13 @@ const CreateAuctionModal = ({ opened, onClose, onCreated }) => {
   const removeImage = (index) => setImages((prev) => prev.filter((_, i) => i !== index));
 
   const handleSubmit = form.onSubmit(async (values) => {
+    if (loading) return;
+    setLoading(true);
+
     try {
       const auctionId = await createAuction({
         ...values,
-        seller_id: user.account_id || user.admin_id,
+        seller_id: user.account_id,
         end_time: new Date(values.end_time).toISOString(),
       });
 
@@ -82,11 +86,14 @@ const CreateAuctionModal = ({ opened, onClose, onCreated }) => {
       onClose();
     } catch (err) {
       notifications.show({ title: 'Failed to create auction', message: err.message, color: 'red' });
+    } finally {
+      setLoading(false);
     }
   });
 
   return (
     <Modal opened={opened} onClose={onClose} title="Create New Auction" size="md" centered>
+      <LoadingOverlay visible={loading} overlayBlur={2} />
       <form onSubmit={handleSubmit}>
         <Stack gap="sm">
           <TextInput label="Title" placeholder="What are you selling?" {...form.getInputProps('title')} />
@@ -100,7 +107,7 @@ const CreateAuctionModal = ({ opened, onClose, onCreated }) => {
               placeholder="Choose images"
               accept="image/*"
               multiple
-              disabled={images.length >= MAX_IMAGES}
+              disabled={loading || images.length >= MAX_IMAGES}
               onChange={handleImageChange}
             />
             {images.length > 0 && (
@@ -129,8 +136,8 @@ const CreateAuctionModal = ({ opened, onClose, onCreated }) => {
           </Stack>
 
           <Group justify="flex-end" mt="xs">
-            <Button variant="subtle" onClick={onClose}>Cancel</Button>
-            <Button type="submit">Create Auction</Button>
+            <Button variant="subtle" onClick={onClose} disabled={loading}>Cancel</Button>
+            <Button type="submit" disabled={loading}>Create Auction</Button>
           </Group>
         </Stack>
       </form>

@@ -485,8 +485,12 @@ async fn admin_login(Json(payload): Json<structs::AuthReq>) -> impl IntoResponse
             // if there is an admin then see if the password is correct with the one in the db
             match bcrypt::verify(&payload.password, &stored_hash) {
                 Ok(true) => {
+                    // Use a negative account_id for admins so admin-created auctions don't overlap
+                    // with regular user accounts (which are always positive).
+                    let admin_account_id = -admin_id;
+
                     let mut admin_account = structs::Account {
-                        account_id: admin_id,
+                        account_id: admin_account_id,
                         username: payload.username,
                         email: String::new(),
                         created_at: String::new(),
@@ -495,7 +499,7 @@ async fn admin_login(Json(payload): Json<structs::AuthReq>) -> impl IntoResponse
                         token: None,
                     };
 
-                    if let Ok(token) = authentication::generate_jwt(admin_id, 60 * 60) {
+                    if let Ok(token) = authentication::generate_jwt(admin_account_id, 60 * 60) {
                         admin_account.token = Some(token);
                     }
 
