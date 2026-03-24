@@ -1,9 +1,9 @@
 use rusqlite::{Connection, Result};
 use std::path::PathBuf;
-
+use std::fs;
 use crate::queries;
 
-const LIVE_DB_FILE: &str = "robinsons_auctioneers.db";
+pub const LIVE_DB_FILE: &str = "/var/data/robinsons_auctioneers.db";
 const LOCAL_DB_FILE: &str = "app/robinsons_auctioneers.db";
 pub const DB_FILE: &str = LIVE_DB_FILE;
 
@@ -13,11 +13,12 @@ fn db_path(file: &str) -> PathBuf {
 }
 
 pub fn open_connection() -> Result<Connection> {
-    Connection::open(db_path(DB_FILE))
+    Connection::open(DB_FILE)
 }
 
 fn create_new_db() -> Result<String> {
-    let conn = Connection::open(db_path(DB_FILE))?;
+    fs::create_dir_all("/var/data").ok();
+    let conn = Connection::open(DB_FILE)?;
      conn.execute_batch(
         queries::CREATE_DB_SCHEMA,
     )?;
@@ -29,7 +30,7 @@ fn check_db_exists(database: &str) -> bool {
 }
 
 pub fn initialize_db() -> Result<String> {
-    if !check_db_exists(db_path(DB_FILE).to_str().expect("Failed to start DB. Attempting to create new database...")) {
+    if !check_db_exists(DB_FILE) {
         create_new_db()?;
     }
     Ok("Database is ready.".to_string())
